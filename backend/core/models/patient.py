@@ -26,6 +26,7 @@ class Patient(Document):
     # Patient demographics
     full_name = StringField(required=True, max_length=200)
     age = IntField(required=True, min_value=0, max_value=120)
+    gender = StringField(required=True, choices=["M", "F"], default="M")
 
     # Computed attendance score (0–100); new patients get 75 as a neutral baseline
     # Updated after each completed appointment

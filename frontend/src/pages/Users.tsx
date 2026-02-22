@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -43,6 +50,7 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -70,13 +78,13 @@ export default function UsersPage() {
   };
 
   const handleAdd = async () => {
-    if (!name || !age) return;
+    if (!name || !age || !gender) return;
     const newId = `P-${String(patients.length + 1).padStart(3, "0")}`;
     const patientData = {
       id: newId,
       fullName: name,
       age: parseInt(age),
-      gender: "M", // Default
+      gender,
     };
 
     try {
@@ -85,6 +93,7 @@ export default function UsersPage() {
       setDialogOpen(false);
       setName("");
       setAge("");
+      setGender("");
       toast({ title: "Patient added", description: response.data.fullName });
     } catch (error) {
       toast({
@@ -188,12 +197,24 @@ export default function UsersPage() {
                       placeholder="35"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={gender} onValueChange={setGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="M">Male</SelectItem>
+                        <SelectItem value="F">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="p-3 bg-muted/50 rounded-lg border border-dashed text-xs text-muted-foreground">
                     Attendance score will be generated automatically.
                   </div>
                   <Button
                     className="w-full"
-                    disabled={!name || !age}
+                    disabled={!name || !age || !gender}
                     onClick={handleAdd}
                   >
                     Add Patient

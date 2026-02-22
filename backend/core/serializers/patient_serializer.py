@@ -24,6 +24,7 @@ class PatientSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
     fullName = serializers.CharField(source="full_name")
     age = serializers.IntegerField(min_value=0, max_value=120)
+    gender = serializers.CharField()
     attendanceScore = serializers.FloatField(source="attendance_score", read_only=True)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
 
@@ -38,39 +39,31 @@ class PatientSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        """
-        Create a new Patient document in MongoDB.
-        The 'id' must be provided (e.g., "P-001") by the caller/view.
-        """
         patient = Patient(
             id=validated_data["id"],
             full_name=validated_data["full_name"],
             age=validated_data["age"],
+            gender=validated_data.get("gender", "M"),
         )
         patient.save()
         return patient
 
     def update(self, instance, validated_data):
-        """
-        Update mutable patient fields: full_name and age.
-        attendance_score is NOT updatable here — it's managed by the backend.
-        """
         instance.full_name = validated_data.get("full_name", instance.full_name)
         instance.age = validated_data.get("age", instance.age)
+        instance.gender = validated_data.get("gender", instance.gender)
         instance.save()
         return instance
 
 
 class PatientCreateSerializer(serializers.Serializer):
     """
-    Input serializer for creating a patient. Accepts the id from the client
-    (as the frontend generates it, e.g., "P-001").
+    Input serializer for creating a patient.
     """
     id = serializers.CharField(required=True)
     fullName = serializers.CharField(source="full_name", required=True)
     age = serializers.IntegerField(min_value=0, max_value=120, required=True)
-    # gender is accepted but stored separately (not a model field, ignored for now)
-    gender = serializers.CharField(required=False, allow_blank=True)
+    gender = serializers.ChoiceField(choices=["M", "F"], required=True)
 
     def validate_id(self, value):
         if Patient.objects(id=value).first():
@@ -87,6 +80,7 @@ class PatientCreateSerializer(serializers.Serializer):
             id=validated_data["id"],
             full_name=validated_data["full_name"],
             age=validated_data["age"],
+            gender=validated_data["gender"],
         )
         patient.save()
         return patient

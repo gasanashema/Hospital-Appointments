@@ -13,6 +13,7 @@ export interface Patient {
   id: string;
   fullName: string;
   age: number;
+  gender: "M" | "F";
   attendanceScore: number;
 }
 
