@@ -1,0 +1,17 @@
+{
+  "name": "predict",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "backend": "bash -c 'cd backend && source venv/bin/activate && python manage.py runserver'",
+    "frontend": "bash -c 'cd frontend && npm run dev'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
