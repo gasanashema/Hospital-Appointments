@@ -38,7 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Patient, initialPatients } from "@/data/mockData";
+import { Patient } from "@/data/mockData";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
@@ -296,8 +296,11 @@ export default function UsersPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Full Name</TableHead>
+                      <TableHead className="text-center">Gender</TableHead>
                       <TableHead className="text-center">Age</TableHead>
-                      <TableHead className="text-center">Attendance</TableHead>
+                      <TableHead className="text-center">
+                        Attendance Score
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -330,6 +333,7 @@ export default function UsersPage() {
                           <TableCell className="font-medium">
                             {p.fullName}
                           </TableCell>
+                          <TableCell className="text-center">{p.gender}</TableCell>
                           <TableCell className="text-center">{p.age}</TableCell>
                           <TableCell className="text-center">
                             <Badge className={getScoreColor(p.attendanceScore)}>
