@@ -4,6 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "setup": "node -e \"const { spawn } = require('child_process'); const script = process.platform === 'win32' ? 'setup.bat' : 'bash setup.sh'; spawn(script, { shell: true, stdio: 'inherit' });\"",
+    "setup:backend": "bash -c 'cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt'",
+    "setup:frontend": "bash -c 'cd frontend && npm install'",
     "backend": "bash -c 'cd backend && source venv/bin/activate && python manage.py runserver'",
     "frontend": "bash -c 'cd frontend && npm run dev'"
   },
