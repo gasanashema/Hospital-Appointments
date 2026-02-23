@@ -296,8 +296,11 @@ export default function UsersPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Full Name</TableHead>
+                      <TableHead className="text-center">Gender</TableHead>
                       <TableHead className="text-center">Age</TableHead>
-                      <TableHead className="text-center">Attendance</TableHead>
+                      <TableHead className="text-center">
+                        Attendance Score
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -330,6 +333,7 @@ export default function UsersPage() {
                           <TableCell className="font-medium">
                             {p.fullName}
                           </TableCell>
+                          <TableCell className="text-center">{p.gender}</TableCell>
                           <TableCell className="text-center">{p.age}</TableCell>
                           <TableCell className="text-center">
                             <Badge className={getScoreColor(p.attendanceScore)}>

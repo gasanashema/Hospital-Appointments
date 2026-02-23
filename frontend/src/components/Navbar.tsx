@@ -16,40 +16,58 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-primary backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src={logo} alt="Health Sphere" className="h-8 w-8" />
-          <span className="font-display text-lg font-bold text-primary-foreground">
+          <img
+            src={logo}
+            alt="Health Sphere"
+            className="h-9 w-auto object-contain"
+          />
+          <span className="font-display text-lg font-bold text-foreground">
             Health Sphere
           </span>
         </Link>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-primary-foreground/15 ${
-                location.pathname === item.path
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "text-primary-foreground/70"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <div className="ml-2">
+          {navItems
+            .filter(
+              (item) =>
+                !(item.label === "Dashboard" && location.pathname === "/"),
+            )
+            .map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  location.pathname === item.path
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          <div className="ml-2 mr-2">
             <ThemeToggle />
           </div>
-          <Link
-            to="/"
-            className="ml-1 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-primary-foreground/70 transition-colors hover:bg-primary-foreground/15 hover:text-primary-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Link>
+          {location.pathname === "/" ? (
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white bg-primary transition-all hover:bg-primary/90 shadow-sm"
+            >
+              Login
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="ml-1 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Link>
+          )}
         </nav>
 
         {/* Mobile toggle */}
@@ -57,38 +75,57 @@ export function Navbar() {
           <ThemeToggle />
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded-lg p-2 text-primary-foreground/70 hover:bg-primary-foreground/15"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent"
           >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {menuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="border-t border-primary-foreground/10 bg-primary p-4 md:hidden">
-          {navItems.map((item) => (
+        <div className="border-t border-border bg-background p-4 md:hidden">
+          {navItems
+            .filter(
+              (item) =>
+                !(item.label === "Dashboard" && location.pathname === "/"),
+            )
+            .map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMenuOpen(false)}
+                className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  location.pathname === item.path
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          {location.pathname === "/" ? (
             <Link
-              key={item.path}
-              to={item.path}
+              to="/login"
               onClick={() => setMenuOpen(false)}
-              className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                location.pathname === item.path
-                  ? "bg-primary-foreground/20 text-primary-foreground"
-                  : "text-primary-foreground/70 hover:bg-primary-foreground/15"
-              }`}
+              className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
             >
-              {item.label}
+              Login
             </Link>
-          ))}
-          <Link
-            to="/"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-primary-foreground/70 transition-colors hover:bg-primary-foreground/15"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Link>
+          ) : (
+            <Link
+              to="/login"
+              onClick={() => setMenuOpen(false)}
+              className="mt-1 flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Link>
+          )}
         </div>
       )}
     </header>
