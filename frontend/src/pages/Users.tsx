@@ -38,7 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Patient, initialPatients } from "@/data/mockData";
+import { Patient } from "@/data/mockData";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
