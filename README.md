@@ -1,4 +1,4 @@
-![Health Sphere Banner](./frontend/dist/assets/logo-BAmNwTn6.png)
+![Health Sphere Banner](./assets/banner.jpeg)
 
 # Health Sphere 🏥
 
