@@ -72,14 +72,16 @@ export default function Predictions() {
 
   const correctPredictions = doneAppts.filter(
     (a) =>
-      (a.prediction.label === "Show" && a.showedUp === true) ||
-      (a.prediction.label === "No-show" && a.showedUp === false),
+      a.prediction &&
+      ((a.prediction.label === "Show" && a.showedUp === true) ||
+        (a.prediction.label === "No-show" && a.showedUp === false)),
   );
 
   const incorrectPredictions = doneAppts.filter(
     (a) =>
-      (a.prediction.label === "Show" && a.showedUp === false) ||
-      (a.prediction.label === "No-show" && a.showedUp === true),
+      a.prediction &&
+      ((a.prediction.label === "Show" && a.showedUp === false) ||
+        (a.prediction.label === "No-show" && a.showedUp === true)),
   );
 
   // ── Pie chart ──────────────────────────────────────────────────────────────
@@ -96,8 +98,9 @@ export default function Predictions() {
     const month = a.date.slice(0, 7); // "YYYY-MM"
     if (!monthlyMap[month]) monthlyMap[month] = { accurate: 0, inaccurate: 0 };
     const correct =
-      (a.prediction.label === "Show" && a.showedUp === true) ||
-      (a.prediction.label === "No-show" && a.showedUp === false);
+      a.prediction &&
+      ((a.prediction.label === "Show" && a.showedUp === true) ||
+        (a.prediction.label === "No-show" && a.showedUp === false));
     if (correct) monthlyMap[month].accurate++;
     else monthlyMap[month].inaccurate++;
   });
@@ -344,7 +347,7 @@ export default function Predictions() {
                         variant="default"
                         className="bg-success/10 text-success text-xs"
                       >
-                        {a.prediction.label} · {a.prediction.probability}%
+                        {a.prediction?.label} · {a.prediction?.probability}%
                       </Badge>
                     </div>
                   ))}
@@ -380,7 +383,7 @@ export default function Predictions() {
                         </p>
                       </div>
                       <Badge variant="destructive" className="text-xs">
-                        {a.prediction.label} · {a.prediction.probability}%
+                        {a.prediction?.label} · {a.prediction?.probability}%
                       </Badge>
                     </div>
                   ))}

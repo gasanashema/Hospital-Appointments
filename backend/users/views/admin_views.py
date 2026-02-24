@@ -51,13 +51,17 @@ class ListDoctorsView(APIView):
 
     def get(self, request):
         query = request.GET.get('q', '')
+        active_only = request.GET.get('active_only', 'false').lower() == 'true'
         
-        # Only show active doctors
-        doctors = User.objects.filter(role='DOCTOR', is_active=True)
+        # Base queryset for doctors
+        doctors_qs = User.objects.filter(role='DOCTOR')
         
+        if active_only:
+            doctors_qs = doctors_qs.filter(is_active=True)
+            
         if query:
             from mongoengine.queryset.visitor import Q
-            doctors = doctors.filter(
+            doctors_qs = doctors_qs.filter(
                 Q(full_name__icontains=query) | Q(email__icontains=query)
             )
             
@@ -67,7 +71,7 @@ class ListDoctorsView(APIView):
             'fullName': d.full_name,
             'isActive': d.is_active,
             'createdAt': d.created_at
-        } for d in doctors]
+        } for d in doctors_qs]
         return Response(data, status=status.HTTP_200_OK)
 class DoctorDetailView(APIView):
     """

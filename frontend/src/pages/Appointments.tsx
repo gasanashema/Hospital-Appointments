@@ -52,27 +52,17 @@ import {
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Appointment, Patient, Doctor } from "@/data/mockData";
+import { CreateAppointmentForm } from "@/components/CreateAppointmentForm";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
-
-  // Create form state
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [selectedTime, setSelectedTime] = useState("09:00");
-  const [smsReceived, setSmsReceived] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [patientSearch, setPatientSearch] = useState("");
-  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
-  const [patientPopoverOpen, setPatientPopoverOpen] = useState(false);
 
   // Outcome button loading state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -81,14 +71,7 @@ export default function Appointments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date>();
-  const [isSearching, setIsSearching] = useState(false);
 
-  // Admin specific state
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState("");
-  const [doctorSearch, setDoctorSearch] = useState("");
-  const [isSearchingDoctors, setIsSearchingDoctors] = useState(false);
-  const [doctorPopoverOpen, setDoctorPopoverOpen] = useState(false);
   const userString = localStorage.getItem("user");
   const currentUser = userString ? JSON.parse(userString) : null;
   const isAdmin = currentUser?.role === "ADMIN";
@@ -100,7 +83,6 @@ export default function Appointments() {
     (a) => a.status === "done" || a.status === "canceled",
   );
 
-  // ── Fetch appointments and patients on mount ──────────────────────────────
   const fetchData = async (query = "", status = "all", date?: Date) => {
     setLoading(true);
     try {
@@ -114,17 +96,11 @@ export default function Appointments() {
         endpoint = `/appointments/search/?${params.toString()}`;
       }
 
-      const [apptRes, patientsRes] = await Promise.all([
-        api.get(endpoint),
-        api.get("/patients/"),
-      ]);
+      const apptRes = await api.get(endpoint);
       setAppointments(
-        Array.isArray(apptRes.data) ? apptRes.data : apptRes.data.appointments,
-      );
-      setPatients(
-        Array.isArray(patientsRes.data)
-          ? patientsRes.data
-          : patientsRes.data.patients,
+        Array.isArray(apptRes.data)
+          ? apptRes.data
+          : (apptRes.data as any).appointments,
       );
     } catch (err) {
       toast({
@@ -134,7 +110,6 @@ export default function Appointments() {
       });
     } finally {
       setLoading(false);
-      setIsSearching(false);
     }
   };
 
@@ -145,91 +120,9 @@ export default function Appointments() {
     return () => clearTimeout(timer);
   }, [searchQuery, statusFilter, dateFilter]);
 
-  // Combined doctor search effect
-  useEffect(() => {
-    if (!isAdmin || !dialogOpen) return;
-
-    const timer = setTimeout(() => {
-      setIsSearchingDoctors(true);
-      const endpoint = doctorSearch
-        ? `/admin/doctors/all/?q=${doctorSearch}`
-        : "/admin/doctors/all/";
-
-      api
-        .get(endpoint)
-        .then((res) => {
-          setDoctors(res.data);
-          setIsSearchingDoctors(false);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch doctors", err);
-          setIsSearchingDoctors(false);
-        });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [isAdmin, dialogOpen, doctorSearch]);
-
-  // Debounced search for patients in the creation modal
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (dialogOpen) {
-        setIsSearchingPatients(true);
-        const endpoint = patientSearch
-          ? `/patients/search/?q=${patientSearch}`
-          : "/patients/";
-        api
-          .get(endpoint)
-          .then((res) => {
-            setPatients(Array.isArray(res.data) ? res.data : res.data.patients);
-            setIsSearchingPatients(false);
-          })
-          .catch(() => {
-            setIsSearchingPatients(false);
-          });
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [dialogOpen, patientSearch]);
-
-  // ── Create appointment (auto-generates prediction in backend) ─────────────
-  const handleCreate = async () => {
-    if (!selectedPatientId || !selectedDate) return;
-    setCreating(true);
-    try {
-      const payload: any = {
-        patientIdInput: selectedPatientId,
-        appointmentDate:
-          format(selectedDate, "yyyy-MM-dd") + "T" + selectedTime + ":00",
-        smsReceived,
-      };
-
-      if (isAdmin && selectedDoctorId) {
-        payload.doctorId = selectedDoctorId;
-      }
-
-      const response = await api.post("/appointments/", payload);
-      setAppointments((prev) => [response.data, ...prev]);
-      setDialogOpen(false);
-      setSelectedPatientId("");
-      setPatientSearch("");
-      setSelectedDoctorId("");
-      setDoctorSearch("");
-      setSelectedDate(undefined);
-      setSmsReceived(false);
-      toast({
-        title: "Appointment created",
-        description: `${response.data.patientName} on ${format(selectedDate, "PPP")}`,
-      });
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.non_field_errors?.[0] ||
-        err?.response?.data?.error ||
-        "Failed to create appointment.";
-      toast({ variant: "destructive", title: "Error", description: msg });
-    } finally {
-      setCreating(false);
-    }
+  const handleCreateSuccess = (newAppt: Appointment) => {
+    setAppointments((prev) => [newAppt, ...prev]);
+    setDialogOpen(false);
   };
 
   // ── Mark appointment as done (showed up / late / no-show) ─────────────────
@@ -539,247 +432,10 @@ export default function Appointments() {
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
-                    <div className="space-y-2">
-                      <Label>Patient</Label>
-                      <Popover
-                        open={patientPopoverOpen}
-                        onOpenChange={setPatientPopoverOpen}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={patientPopoverOpen}
-                            className="w-full justify-between font-normal"
-                          >
-                            {selectedPatientId
-                              ? patients.find((p) => p.id === selectedPatientId)
-                                  ?.fullName + ` (${selectedPatientId})`
-                              : "Select patient..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-[var(--radix-popover-trigger-width)] p-0"
-                          align="start"
-                        >
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder="Search name or ID..."
-                              value={patientSearch}
-                              onValueChange={setPatientSearch}
-                            />
-                            <CommandList>
-                              {isSearchingPatients && (
-                                <div className="flex items-center justify-center py-6">
-                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
-                                  <span className="text-sm text-muted-foreground">
-                                    Searching...
-                                  </span>
-                                </div>
-                              )}
-                              {!isSearchingPatients &&
-                                patients.length === 0 && (
-                                  <CommandEmpty>No patient found.</CommandEmpty>
-                                )}
-                              <CommandGroup>
-                                {patients.map((p) => (
-                                  <CommandItem
-                                    key={p.id}
-                                    value={p.id}
-                                    onSelect={(currentValue) => {
-                                      setSelectedPatientId(
-                                        currentValue === selectedPatientId
-                                          ? ""
-                                          : currentValue,
-                                      );
-                                      setPatientPopoverOpen(false);
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedPatientId === p.id
-                                          ? "opacity-100"
-                                          : "opacity-0",
-                                      )}
-                                    />
-                                    <div className="flex flex-col">
-                                      <span>{p.fullName}</span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {p.id}
-                                      </span>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !selectedDate && "text-muted-foreground",
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate
-                              ? format(selectedDate, "PPP")
-                              : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            disabled={(date) =>
-                              isBefore(date, startOfDay(new Date()))
-                            }
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Time</Label>
-                      <Select
-                        value={selectedTime}
-                        onValueChange={setSelectedTime}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeSlots.map((t) => (
-                            <SelectItem key={t} value={t}>
-                              {t}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {isAdmin && (
-                      <div className="space-y-2">
-                        <Label>Assigned Doctor</Label>
-                        <Popover
-                          open={doctorPopoverOpen}
-                          onOpenChange={setDoctorPopoverOpen}
-                        >
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={doctorPopoverOpen}
-                              className="w-full justify-between font-normal"
-                            >
-                              {selectedDoctorId
-                                ? doctors.find((d) => d.id === selectedDoctorId)
-                                    ?.fullName
-                                : "Select doctor..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-[var(--radix-popover-trigger-width)] p-0"
-                            align="start"
-                          >
-                            <Command shouldFilter={false}>
-                              <CommandInput
-                                placeholder="Search doctor name or email..."
-                                value={doctorSearch}
-                                onValueChange={setDoctorSearch}
-                              />
-                              <CommandList>
-                                {isSearchingDoctors && (
-                                  <div className="flex items-center justify-center py-6">
-                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
-                                    <span className="text-sm text-muted-foreground">
-                                      Searching...
-                                    </span>
-                                  </div>
-                                )}
-                                {!isSearchingDoctors &&
-                                  doctors.length === 0 && (
-                                    <CommandEmpty>
-                                      No doctor found.
-                                    </CommandEmpty>
-                                  )}
-                                <CommandGroup>
-                                  {doctors.map((d) => (
-                                    <CommandItem
-                                      key={d.id}
-                                      value={d.id}
-                                      onSelect={(currentValue) => {
-                                        setSelectedDoctorId(
-                                          currentValue === selectedDoctorId
-                                            ? ""
-                                            : currentValue,
-                                        );
-                                        setDoctorPopoverOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          selectedDoctorId === d.id
-                                            ? "opacity-100"
-                                            : "opacity-0",
-                                        )}
-                                      />
-                                      <div className="flex flex-col">
-                                        <span>{d.fullName}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {d.email}
-                                        </span>
-                                      </div>
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={smsReceived}
-                        onCheckedChange={setSmsReceived}
-                      />
-                      <Label>SMS Reminder Received</Label>
-                    </div>
-
-                    <Button
-                      className="w-full"
-                      disabled={
-                        !selectedPatientId ||
-                        !selectedDate ||
-                        creating ||
-                        (isAdmin && !selectedDoctorId)
-                      }
-                      onClick={handleCreate}
-                    >
-                      {creating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating Prediction…
-                        </>
-                      ) : (
-                        "Create Appointment"
-                      )}
-                    </Button>
+                    <CreateAppointmentForm
+                      isAdmin={isAdmin}
+                      onSuccess={handleCreateSuccess}
+                    />
                   </div>
                 </DialogContent>
               </Dialog>
