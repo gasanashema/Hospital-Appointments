@@ -3,15 +3,14 @@ from .models import Patient
 
 class PatientSerializer(serializers.Serializer):
     id = serializers.CharField()
-    full_name = serializers.CharField()
+    fullName = serializers.CharField(source='full_name')
     age = serializers.IntegerField()
     gender = serializers.ChoiceField(choices=["M", "F"])
-    attendance_score = serializers.FloatField(read_only=True)
-    doctor_id = serializers.CharField(source='doctor.id', read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    attendanceScore = serializers.FloatField(source='attendance_score', read_only=True)
+    doctorId = serializers.CharField(source='doctor.id', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
 
     def create(self, validated_data):
-        # doctor is passed in context or manually linked
         request = self.context.get('request')
         doctor = request.user
         return Patient(doctor=doctor, **validated_data).save()

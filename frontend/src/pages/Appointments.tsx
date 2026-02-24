@@ -74,10 +74,18 @@ export default function Appointments() {
       try {
         const [apptRes, patientsRes] = await Promise.all([
           api.get("/appointments/"),
-          api.get("/users/"),
+          api.get("/patients/"),
         ]);
-        setAppointments(apptRes.data);
-        setPatients(patientsRes.data);
+        setAppointments(
+          Array.isArray(apptRes.data)
+            ? apptRes.data
+            : apptRes.data.appointments,
+        );
+        setPatients(
+          Array.isArray(patientsRes.data)
+            ? patientsRes.data
+            : patientsRes.data.patients,
+        );
       } catch (err) {
         toast({
           variant: "destructive",
@@ -97,9 +105,9 @@ export default function Appointments() {
     setCreating(true);
     try {
       const response = await api.post("/appointments/", {
-        patientId: selectedPatientId,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        time: selectedTime,
+        patientIdInput: selectedPatientId,
+        appointmentDate:
+          format(selectedDate, "yyyy-MM-dd") + "T" + selectedTime + ":00",
         smsReceived,
       });
       setAppointments((prev) => [response.data, ...prev]);

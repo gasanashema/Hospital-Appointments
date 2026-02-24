@@ -47,9 +47,13 @@ export default function Predictions() {
       try {
         const [apptRes, statsRes] = await Promise.all([
           api.get<Appointment[]>("/appointments/"),
-          api.get<PredStats>("/stats/predictions/"),
+          api.get<PredStats>("/analytics/predictions/"),
         ]);
-        setAppointments(apptRes.data);
+        setAppointments(
+          Array.isArray(apptRes.data)
+            ? apptRes.data
+            : (apptRes.data as any).appointments,
+        );
         setStats(statsRes.data);
       } catch (err) {
         console.error("Predictions fetch failed:", err);

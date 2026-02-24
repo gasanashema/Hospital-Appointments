@@ -64,8 +64,10 @@ export default function UsersPage() {
 
   const fetchPatients = async () => {
     try {
-      const response = await api.get("/users/");
-      setPatients(response.data);
+      const response = await api.get("/patients/");
+      setPatients(
+        Array.isArray(response.data) ? response.data : response.data.patients,
+      );
     } catch (error) {
       toast({
         variant: "destructive",
@@ -88,7 +90,7 @@ export default function UsersPage() {
     };
 
     try {
-      const response = await api.post("/users/", patientData);
+      const response = await api.post("/patients/", patientData);
       setPatients((prev) => [...prev, response.data]);
       setDialogOpen(false);
       setName("");
@@ -108,7 +110,7 @@ export default function UsersPage() {
     if (!selectedPatient || !editName || !editAge) return;
 
     try {
-      const response = await api.patch(`/users/${selectedPatient.id}/`, {
+      const response = await api.patch(`/patients/${selectedPatient.id}/`, {
         fullName: editName,
         age: parseInt(editAge),
       });
@@ -128,7 +130,7 @@ export default function UsersPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/users/${id}/`);
+      await api.delete(`/patients/${id}/`);
       setPatients((prev) => prev.filter((p) => p.id !== id));
       toast({ title: "Patient removed" });
     } catch (error) {
@@ -333,7 +335,9 @@ export default function UsersPage() {
                           <TableCell className="font-medium">
                             {p.fullName}
                           </TableCell>
-                          <TableCell className="text-center">{p.gender}</TableCell>
+                          <TableCell className="text-center">
+                            {p.gender}
+                          </TableCell>
                           <TableCell className="text-center">{p.age}</TableCell>
                           <TableCell className="text-center">
                             <Badge className={getScoreColor(p.attendanceScore)}>
