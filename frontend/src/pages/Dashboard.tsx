@@ -768,7 +768,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 text-xs">
                       {a.prediction ? (
                         <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground uppercase opacity-70">
+                          <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground uppercase opacity-70">
+                            <Brain className="h-2.5 w-2.5 text-info" />
                             Prediction: {a.prediction.probability}%
                           </p>
                           <p

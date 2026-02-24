@@ -86,6 +86,9 @@ export default function Appointments() {
   // Admin specific state
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
+  const [doctorSearch, setDoctorSearch] = useState("");
+  const [isSearchingDoctors, setIsSearchingDoctors] = useState(false);
+  const [doctorPopoverOpen, setDoctorPopoverOpen] = useState(false);
   const userString = localStorage.getItem("user");
   const currentUser = userString ? JSON.parse(userString) : null;
   const isAdmin = currentUser?.role === "ADMIN";
@@ -142,15 +145,30 @@ export default function Appointments() {
     return () => clearTimeout(timer);
   }, [searchQuery, statusFilter, dateFilter]);
 
-  // Fetch doctors if admin
+  // Combined doctor search effect
   useEffect(() => {
-    if (isAdmin) {
+    if (!isAdmin || !dialogOpen) return;
+
+    const timer = setTimeout(() => {
+      setIsSearchingDoctors(true);
+      const endpoint = doctorSearch
+        ? `/admin/doctors/all/?q=${doctorSearch}`
+        : "/admin/doctors/all/";
+
       api
-        .get("/admin/doctors/all/")
-        .then((res) => setDoctors(res.data))
-        .catch((err) => console.error("Failed to fetch doctors", err));
-    }
-  }, [isAdmin]);
+        .get(endpoint)
+        .then((res) => {
+          setDoctors(res.data);
+          setIsSearchingDoctors(false);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch doctors", err);
+          setIsSearchingDoctors(false);
+        });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [isAdmin, dialogOpen, doctorSearch]);
 
   // Debounced search for patients in the creation modal
   useEffect(() => {
@@ -196,6 +214,7 @@ export default function Appointments() {
       setSelectedPatientId("");
       setPatientSearch("");
       setSelectedDoctorId("");
+      setDoctorSearch("");
       setSelectedDate(undefined);
       setSmsReceived(false);
       toast({
@@ -291,7 +310,8 @@ export default function Appointments() {
               {/* ML Prediction section */}
               {appt.prediction ? (
                 <div className="space-y-1 text-right">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground opacity-70">
+                  <div className="flex items-center justify-end gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground opacity-70">
+                    <Brain className="h-3 w-3 text-info" />
                     Prediction: {appt.prediction.probability}%
                   </div>
                   <Badge
@@ -652,21 +672,84 @@ export default function Appointments() {
                     {isAdmin && (
                       <div className="space-y-2">
                         <Label>Assigned Doctor</Label>
-                        <Select
-                          value={selectedDoctorId}
-                          onValueChange={setSelectedDoctorId}
+                        <Popover
+                          open={doctorPopoverOpen}
+                          onOpenChange={setDoctorPopoverOpen}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select doctor..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {doctors.map((d) => (
-                              <SelectItem key={d.id} value={d.id}>
-                                {d.fullName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={doctorPopoverOpen}
+                              className="w-full justify-between font-normal"
+                            >
+                              {selectedDoctorId
+                                ? doctors.find((d) => d.id === selectedDoctorId)
+                                    ?.fullName
+                                : "Select doctor..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[var(--radix-popover-trigger-width)] p-0"
+                            align="start"
+                          >
+                            <Command shouldFilter={false}>
+                              <CommandInput
+                                placeholder="Search doctor name or email..."
+                                value={doctorSearch}
+                                onValueChange={setDoctorSearch}
+                              />
+                              <CommandList>
+                                {isSearchingDoctors && (
+                                  <div className="flex items-center justify-center py-6">
+                                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                                    <span className="text-sm text-muted-foreground">
+                                      Searching...
+                                    </span>
+                                  </div>
+                                )}
+                                {!isSearchingDoctors &&
+                                  doctors.length === 0 && (
+                                    <CommandEmpty>
+                                      No doctor found.
+                                    </CommandEmpty>
+                                  )}
+                                <CommandGroup>
+                                  {doctors.map((d) => (
+                                    <CommandItem
+                                      key={d.id}
+                                      value={d.id}
+                                      onSelect={(currentValue) => {
+                                        setSelectedDoctorId(
+                                          currentValue === selectedDoctorId
+                                            ? ""
+                                            : currentValue,
+                                        );
+                                        setDoctorPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedDoctorId === d.id
+                                            ? "opacity-100"
+                                            : "opacity-0",
+                                        )}
+                                      />
+                                      <div className="flex flex-col">
+                                        <span>{d.fullName}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {d.email}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     )}
 
