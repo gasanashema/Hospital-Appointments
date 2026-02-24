@@ -1,0 +1,45 @@
+services:
+  # 1. API Web Service (Django)
+  - type: web
+    name: health-sphere-api
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn health_sphere_backend.wsgi:application"
+    rootDir: backend
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: health-sphere-cache
+          property: connectionString
+      - key: MONGO_URI
+        sync: false # Set manually in Render Dashboard for safety
+      - key: ENABLE_AUTH
+        value: "True"
+
+  # 2. Celery Worker
+  - type: worker
+    name: health-sphere-worker
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "celery -A health_sphere_backend worker --loglevel=info"
+    rootDir: backend
+    envVars:
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: health-sphere-cache
+          property: connectionString
+      - key: MONGO_URI
+        sync: false
+
+  # 3. Redis Instance (for Celery broker)
+  - type: redis
+    name: health-sphere-cache
+    ipAllowList: [] # Use internal network

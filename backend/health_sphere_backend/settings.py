@@ -16,7 +16,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-change-in-production")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOW_ALL_ORIGINS = DEBUG  # In prod, set specific origins
-ALLOWED_HOSTS = ["*"]  # Restrict in production
+ALLOWED_HOSTS = ["*"]
+RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # ─── Demo Auth Toggle ─────────────────────────────────────────────────────────
 # Set ENABLE_AUTH=True in .env to require token authentication on all endpoints
@@ -43,6 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be before CommonMiddleware
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -126,6 +130,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:8080",
 ]
+# Add production frontend URL if defined
+PROD_FRONTEND_URL = os.getenv("PROD_FRONTEND_URL")
+if PROD_FRONTEND_URL:
+    CORS_ALLOWED_ORIGINS.append(PROD_FRONTEND_URL)
 CORS_ALLOW_ALL_ORIGINS = ALLOW_ALL_ORIGINS  # Allow all in debug mode
 
 # ─── Internationalization ─────────────────────────────────────────────────────
@@ -136,6 +144,14 @@ USE_TZ = True
 
 # ─── Static Files ─────────────────────────────────────────────────────────────
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Optimize static files with WhiteNoise
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ─── ML Model Path ────────────────────────────────────────────────────────────
 MODEL_PATH = BASE_DIR / "model.pkl"
