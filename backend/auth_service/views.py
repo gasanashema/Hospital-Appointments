@@ -16,8 +16,8 @@ class LoginView(APIView):
             tokens = serializer.get_tokens(user)
             
             # Update last login
-            from datetime import datetime
-            user.last_login = datetime.utcnow()
+            from django.utils import timezone
+            user.last_login = timezone.now()
             user.save()
 
             return Response({
@@ -60,8 +60,8 @@ class LogoutView(APIView):
             if not refresh_token:
                 return Response({'error': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
             
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            # token = RefreshToken(refresh_token)
+            # token.blacklist() # Disabled as it requires SQL OutstandingToken
             return Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

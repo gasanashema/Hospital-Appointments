@@ -8,7 +8,7 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
+        email = attrs.get('email', '').strip().lower()
         password = attrs.get('password')
 
         try:
@@ -27,11 +27,11 @@ class LoginSerializer(serializers.Serializer):
         }
 
     def get_tokens(self, user):
-        refresh = RefreshToken.for_user(user)
-        # Note: SimpleJWT's for_user expects a Django model with .pk
-        # Since MongoEngine models have .id, we need to ensure the token
-        # includes the correct user identifier.
-        # We can customize the token if needed.
+        refresh = RefreshToken()
+        # Manually set the user identifier in the token payload.
+        # SimpleJWT expects 'user_id' by default (as per settings).
+        refresh['user_id'] = str(user.id)
+        
         return {
             'refresh': str(refresh),
             'access': str(refresh.access_token),

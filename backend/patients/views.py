@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Patient
 from .serializers import PatientSerializer
 from core.pagination import paginate_queryset
-from users.permissions import IsAdmin, IsDoctor, RequirePasswordChange
+from users.permissions import IsAdmin, IsDoctor
 import mongoengine.queryset.visitor as Q
 
 class PatientListView(APIView):
@@ -13,13 +13,11 @@ class PatientListView(APIView):
     List all patients for the authenticated doctor, or create a new patient.
     Supports pagination.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.role == 'ADMIN':
-            patients = Patient.objects.all()
-        else:
-            patients = Patient.objects.filter(doctor=request.user)
+        # Doctors can see all patients as requested.
+        patients = Patient.objects.all()
         
         paginated_data = paginate_queryset(patients, request)
         serializer = PatientSerializer(paginated_data['items'], many=True)
@@ -43,17 +41,15 @@ class PatientSearchView(APIView):
     """
     Search patients by ID or name (partial match).
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
             return Response([])
 
-        if request.user.role == 'ADMIN':
-            base_qs = Patient.objects.all()
-        else:
-            base_qs = Patient.objects.filter(doctor=request.user)
+        # Doctors can search through all patients.
+        base_qs = Patient.objects.all()
 
         # Search by ID or full_name
         search_results = base_qs.filter(
@@ -68,13 +64,12 @@ class PatientDetailView(APIView):
     """
     Retrieve, update or delete a patient.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, patient_id, user):
         try:
-            if user.role == 'ADMIN':
-                return Patient.objects.get(id=patient_id)
-            return Patient.objects.get(id=patient_id, doctor=user)
+            # Doctors can retrieve any patient.
+            return Patient.objects.get(id=patient_id)
         except Patient.DoesNotExist:
             return None
 

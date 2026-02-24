@@ -1,3 +1,4 @@
+import datetime
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -5,14 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Appointment
 from .serializers import AppointmentSerializer
 from core.pagination import paginate_queryset
-from users.permissions import IsAdmin, IsDoctor, RequirePasswordChange
+from users.permissions import IsAdmin, IsDoctor
 import mongoengine.queryset.visitor as Q
 
 class AppointmentListView(APIView):
     """
     List all appointments for the authenticated doctor, or create a new appointment.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         if request.user.role == 'ADMIN':
@@ -42,23 +43,40 @@ class AppointmentSearchView(APIView):
     """
     Search appointments by patient name or ID.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         query = request.query_params.get('q', '')
-        if not query:
-            return Response([])
+        date_query = request.query_params.get('date')
+        status_query = request.query_params.get('status')
 
         if request.user.role == 'ADMIN':
             base_qs = Appointment.objects.all()
         else:
             base_qs = Appointment.objects.filter(doctor=request.user)
 
-        # Partial match on patient name or ID
-        search_results = base_qs.filter(
-            Q.Q(patient__full_name__icontains=query) | Q.Q(patient__id__icontains=query)
-        )
+        filters = Q.Q()
         
+        if query:
+            filters &= (Q.Q(patient__full_name__icontains=query) | Q.Q(patient__id__icontains=query))
+        
+        if status_query:
+            filters &= Q.Q(status=status_query)
+            
+        if date_query:
+            try:
+                # Expecting YYYY-MM-DD
+                dt = datetime.datetime.strptime(date_query, '%Y-%m-%d')
+                # Filter for the whole day
+                filters &= Q.Q(appointment_date__gte=dt.replace(hour=0, minute=0, second=0))
+                filters &= Q.Q(appointment_date__lte=dt.replace(hour=23, minute=59, second=59))
+            except ValueError:
+                pass
+
+        if not (query or date_query or status_query):
+            return Response([])
+
+        search_results = base_qs.filter(filters)
         serializer = AppointmentSerializer(search_results, many=True)
         return Response(serializer.data)
 
@@ -67,7 +85,7 @@ class AppointmentDetailView(APIView):
     """
     Retrieve or update appointment (e.g., mark as done).
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, appointment_id, user):
         try:
@@ -105,7 +123,7 @@ class AppointmentCancelView(APIView):
     """
     Cancel a pending appointment.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, appointment_id):
         try:
@@ -120,3 +138,25 @@ class AppointmentCancelView(APIView):
             return Response({'error': 'Appointment not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class DoctorAppointmentsView(APIView):
+    """
+    Admin endpoint to view all appointments for a specific doctor.
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request, doctor_id):
+        try:
+            doctor = User.objects.get(id=doctor_id, role='DOCTOR')
+        except User.DoesNotExist:
+            return Response({'error': 'Doctor not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        appointments = Appointment.objects.filter(doctor=doctor)
+        paginated_data = paginate_queryset(appointments, request)
+        serializer = AppointmentSerializer(paginated_data['items'], many=True)
+        
+        return Response({
+            'appointments': serializer.data,
+            'total': paginated_data['total'],
+            'page': paginated_data['page'],
+            'total_pages': paginated_data['total_pages']
+        })

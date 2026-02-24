@@ -1,6 +1,7 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.utils import timezone
 
 def generate_otp(length=6):
     """
@@ -12,4 +13,4 @@ def get_otp_expiry(minutes=15):
     """
     Get the expiry datetime for an OTP.
     """
-    return datetime.utcnow() + timedelta(minutes=minutes)
+    return timezone.now() + timedelta(minutes=minutes)

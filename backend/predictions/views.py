@@ -2,16 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from users.permissions import IsAdmin, RequirePasswordChange
+from users.permissions import IsAdmin
 from .services.ml_service import MLService
 import datetime
+from django.utils import timezone
 
 class OnDemandPredictionView(APIView):
     """
     Get a prediction without saving to the database.
     Used for "what-if" scenarios in the UI.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -25,7 +26,7 @@ class OnDemandPredictionView(APIView):
             appointment_date_str = data.get('appointmentDate')
             if appointment_date_str:
                 appointment_date = datetime.datetime.fromisoformat(appointment_date_str.replace('Z', '+00:00'))
-                scheduling_interval = (appointment_date - datetime.datetime.utcnow()).days
+                scheduling_interval = (appointment_date - timezone.now()).days
                 if scheduling_interval < 0: scheduling_interval = 0
             else:
                 scheduling_interval = 0
@@ -55,7 +56,7 @@ class ModelRetrainView(APIView):
     Manually trigger a full model retraining.
     Admin only.
     """
-    permission_classes = [IsAuthenticated, IsAdmin, RequirePasswordChange]
+    permission_classes = [IsAuthenticated, IsAdmin]
 
     def post(self, request):
         # In a real app, this would be a Celery task.
@@ -82,7 +83,7 @@ class ModelStatusView(APIView):
     """
     Get current model info and historical performance.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         ml_service = MLService()
@@ -92,6 +93,6 @@ class ModelStatusView(APIView):
         return Response({
             'currentVersion': version,
             'algorithm': 'Logistic Regression',
-            'lastTrained': datetime.datetime.utcnow().isoformat(), # Placeholder
+            'lastTrained': timezone.now().isoformat(), # Placeholder
             'isActive': True
         })

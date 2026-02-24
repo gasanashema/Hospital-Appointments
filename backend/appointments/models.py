@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 from mongoengine import (
     Document,
     EmbeddedDocument,
@@ -30,7 +30,7 @@ class Prediction(EmbeddedDocument):
     # Model version tag for traceability
     model_version = StringField(default="logistic_v1")
 
-    created_at = DateTimeField(default=datetime.utcnow)
+    created_at = DateTimeField(default=timezone.now)
 
 
 class Appointment(Document):
@@ -61,7 +61,7 @@ class Appointment(Document):
     # ML prediction — embedded and read-only after creation
     prediction = EmbeddedDocumentField(Prediction)
 
-    created_at = DateTimeField(default=datetime.utcnow)
+    created_at = DateTimeField(default=timezone.now)
 
     meta = {
         "collection": "appointments",
