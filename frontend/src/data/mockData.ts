@@ -21,6 +21,7 @@ export interface Doctor {
   id: string;
   fullName: string;
   email: string;
+  isActive: boolean;
 }
 
 export interface Appointment {

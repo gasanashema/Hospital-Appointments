@@ -41,13 +41,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { CreateDoctorForm } from "@/components/CreateDoctorForm";
 
 interface Doctor {
   id: string;
   email: string;
-  full_name: string;
-  is_active: boolean;
-  created_at?: string;
+  fullName: string;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 interface Appointment {
@@ -58,13 +59,10 @@ interface Appointment {
   status: string;
 }
 
-export default function Doctors() {
+const Doctors = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -98,30 +96,9 @@ export default function Doctors() {
     }
   };
 
-  const handleCreate = async () => {
-    if (!name || !email || !password) return;
-    try {
-      const response = await api.post("/admin/doctors/", {
-        full_name: name,
-        email: email,
-        password: password,
-      });
-      setDoctors((prev) => [...prev, response.data.user]);
-      setAddDialogOpen(false);
-      setName("");
-      setEmail("");
-      setPassword("");
-      toast({
-        title: "Doctor Created",
-        description: `Account for ${name} created with assigned password.`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.response?.data?.error || "Failed to create doctor",
-      });
-    }
+  const handleCreateSuccess = (newDoctor: Doctor) => {
+    setDoctors((prev) => [...prev, newDoctor]);
+    setAddDialogOpen(false);
   };
 
   const handleUpdate = async () => {
@@ -147,7 +124,7 @@ export default function Doctors() {
 
   const toggleStatus = async (doctor: Doctor) => {
     try {
-      const newStatus = !doctor.is_active;
+      const newStatus = !doctor.isActive;
       const response = await api.patch(`/admin/doctors/${doctor.id}/`, {
         is_active: newStatus,
       });
@@ -156,7 +133,7 @@ export default function Doctors() {
       );
       toast({
         title: `Doctor ${newStatus ? "enabled" : "disabled"}`,
-        description: doctor.full_name,
+        description: doctor.fullName,
       });
     } catch (error: any) {
       toast({
@@ -187,7 +164,7 @@ export default function Doctors() {
 
   const openEditDialog = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
-    setEditName(doctor.full_name);
+    setEditName(doctor.fullName);
     setEditEmail(doctor.email);
     setEditDialogOpen(true);
   };
@@ -217,45 +194,7 @@ export default function Doctors() {
                   Register New Doctor
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Full Name</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Dr. Sarah Connor"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email Address</Label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="doctor@healthsphere.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Initial Password</Label>
-                  <Input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                  />
-                </div>
-                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-xs text-primary/80">
-                  The doctor will be forced to change this password on their
-                  first login.
-                </div>
-                <Button
-                  className="w-full"
-                  disabled={!name || !email || !password}
-                  onClick={handleCreate}
-                >
-                  Create Account
-                </Button>
-              </div>
+              <CreateDoctorForm onSuccess={handleCreateSuccess} />
             </DialogContent>
           </Dialog>
         </div>
@@ -304,7 +243,7 @@ export default function Doctors() {
             <SheetHeader>
               <SheetTitle>Doctor Appointments</SheetTitle>
               <SheetDescription>
-                Appointment history for {selectedDoctor?.full_name}
+                Appointment history for {selectedDoctor?.fullName}
               </SheetDescription>
             </SheetHeader>
             <div className="mt-6 space-y-4">
@@ -375,7 +314,7 @@ export default function Doctors() {
                       variant="outline"
                       className="h-5 px-1.5 min-w-[1.25rem] justify-center bg-success/10 text-success border-success/20"
                     >
-                      {doctors.filter((d) => d.is_active).length}
+                      {doctors.filter((d) => d.isActive).length}
                     </Badge>
                   </TabsTrigger>
                   <TabsTrigger value="inactive" className="gap-2">
@@ -384,14 +323,14 @@ export default function Doctors() {
                       variant="outline"
                       className="h-5 px-1.5 min-w-[1.25rem] justify-center bg-muted-foreground/10 text-muted-foreground border-muted-foreground/20"
                     >
-                      {doctors.filter((d) => !d.is_active).length}
+                      {doctors.filter((d) => !d.isActive).length}
                     </Badge>
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="active" className="m-0">
                   <DoctorTable
-                    doctors={doctors.filter((d) => d.is_active)}
+                    doctors={doctors.filter((d) => d.isActive)}
                     loading={loading}
                     onViewAppointments={viewAppointments}
                     onEdit={openEditDialog}
@@ -401,7 +340,7 @@ export default function Doctors() {
 
                 <TabsContent value="inactive" className="m-0">
                   <DoctorTable
-                    doctors={doctors.filter((d) => !d.is_active)}
+                    doctors={doctors.filter((d) => !d.isActive)}
                     loading={loading}
                     onViewAppointments={viewAppointments}
                     onEdit={openEditDialog}
@@ -415,7 +354,9 @@ export default function Doctors() {
       </div>
     </Layout>
   );
-}
+};
+
+export default Doctors;
 
 interface DoctorTableProps {
   doctors: Doctor[];
@@ -467,7 +408,7 @@ function DoctorTable({
               <TableRow key={d.id}>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{d.full_name}</span>
+                    <span className="font-medium">{d.fullName}</span>
                     <span className="text-[10px] text-muted-foreground font-mono uppercase">
                       ID: {d.id}
                     </span>
@@ -477,8 +418,8 @@ function DoctorTable({
                   {d.email}
                 </TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={d.is_active ? "success" : "secondary"}>
-                    {d.is_active ? "Active" : "Inactive"}
+                  <Badge variant={d.isActive ? "success" : "secondary"}>
+                    {d.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -504,11 +445,11 @@ function DoctorTable({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={`h-8 w-8 ${d.is_active ? "text-destructive" : "text-success"}`}
+                      className={`h-8 w-8 ${d.isActive ? "text-destructive" : "text-success"}`}
                       onClick={() => onToggleStatus(d)}
-                      title={d.is_active ? "Disable Account" : "Enable Account"}
+                      title={d.isActive ? "Disable Account" : "Enable Account"}
                     >
-                      {d.is_active ? (
+                      {d.isActive ? (
                         <PowerOff className="h-4 w-4" />
                       ) : (
                         <Power className="h-4 w-4" />
