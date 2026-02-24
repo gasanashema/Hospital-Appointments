@@ -17,6 +17,13 @@ export interface Patient {
   attendanceScore: number;
 }
 
+export interface Doctor {
+  id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+}
+
 export interface Appointment {
   id: string;
   patientId: string;

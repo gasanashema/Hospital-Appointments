@@ -4,16 +4,41 @@ import { Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/logo.png";
 
-const navItems = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Appointments", path: "/appointments" },
-  { label: "Patients", path: "/users" },
-  { label: "Predictions", path: "/predictions" },
-];
+import { useNavigate } from "react-router-dom";
+import api from "@/lib/api";
 
 export function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const userString = localStorage.getItem("user");
+  const user = userString ? JSON.parse(userString) : null;
+  const isAdmin = user?.role === "ADMIN";
+
+  const currentNavItems = [
+    { label: "Dashboard", path: "/dashboard" },
+    { label: "Appointments", path: "/appointments" },
+    { label: "Patients", path: "/users" },
+    ...(isAdmin ? [{ label: "Doctors", path: "/doctors" }] : []),
+    { label: "Predictions", path: "/predictions" },
+  ];
+
+  const handleLogout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (refreshToken) {
+        await api.post("/auth/logout/", { refresh: refreshToken });
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      localStorage.clear();
+      setMenuOpen(false);
+      // Use replace: true to remove current entry from history
+      navigate("/login", { replace: true });
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -31,7 +56,7 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
-          {navItems
+          {currentNavItems
             .filter(
               (item) =>
                 !(item.label === "Dashboard" && location.pathname === "/"),
@@ -60,13 +85,13 @@ export function Navbar() {
               Login
             </Link>
           ) : (
-            <Link
-              to="/login"
+            <button
+              onClick={handleLogout}
               className="ml-1 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <LogOut className="h-4 w-4" />
               Logout
-            </Link>
+            </button>
           )}
         </nav>
 
@@ -89,7 +114,7 @@ export function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="border-t border-border bg-background p-4 md:hidden">
-          {navItems
+          {currentNavItems
             .filter(
               (item) =>
                 !(item.label === "Dashboard" && location.pathname === "/"),
@@ -117,14 +142,13 @@ export function Navbar() {
               Login
             </Link>
           ) : (
-            <Link
-              to="/login"
-              onClick={() => setMenuOpen(false)}
+            <button
+              onClick={handleLogout}
               className="mt-1 flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent"
             >
               <LogOut className="h-4 w-4" />
               Logout
-            </Link>
+            </button>
           )}
         </div>
       )}

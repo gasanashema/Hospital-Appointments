@@ -1,4 +1,2 @@
-from core.models.patient import Patient
-from core.models.appointment import Appointment, Prediction
-
-__all__ = ["Patient", "Appointment", "Prediction"]
+# This file is intentionally left mostly empty as models have been moved to dedicated apps.
+# Centralized imports are discouraged in favor of per-app imports.

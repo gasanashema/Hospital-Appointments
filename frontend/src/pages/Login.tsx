@@ -11,19 +11,39 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Lock, Mail, ArrowLeft } from "lucide-react";
+import { Lock, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
+
+import api from "@/lib/api";
+import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder login - redirects to dashboard as requested
-    console.log("Login attempted with:", { email, password });
-    navigate("/dashboard");
+    setLoading(true);
+
+    try {
+      const response = await api.post("/auth/login/", { email, password });
+      const { access, refresh, user } = response.data;
+
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      toast.success(`Welcome back, ${user.full_name}`);
+      navigate("/dashboard");
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      const message = err.response?.data?.error || "Invalid email or password";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,8 +111,15 @@ const Login = () => {
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
         </CardContent>

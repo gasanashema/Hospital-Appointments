@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -24,6 +25,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,31 +44,37 @@ import {
   Clock,
   Ban,
   Loader2,
+  Search,
+  Filter,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Appointment, Patient } from "@/data/mockData";
+import { Appointment, Patient, Doctor } from "@/data/mockData";
+import { CreateAppointmentForm } from "@/components/CreateAppointmentForm";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
-  // Create form state
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [selectedTime, setSelectedTime] = useState("09:00");
-  const [smsReceived, setSmsReceived] = useState(false);
-  const [creating, setCreating] = useState(false);
-
   // Outcome button loading state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Search/Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<Date>();
+
+  const userString = localStorage.getItem("user");
+  const currentUser = userString ? JSON.parse(userString) : null;
+  const isAdmin = currentUser?.role === "ADMIN";
 
   const { toast } = useToast();
 
@@ -68,58 +83,46 @@ export default function Appointments() {
     (a) => a.status === "done" || a.status === "canceled",
   );
 
-  // ── Fetch appointments and patients on mount ──────────────────────────────
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [apptRes, patientsRes] = await Promise.all([
-          api.get("/appointments/"),
-          api.get("/users/"),
-        ]);
-        setAppointments(apptRes.data);
-        setPatients(patientsRes.data);
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load appointments.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  // ── Create appointment (auto-generates prediction in backend) ─────────────
-  const handleCreate = async () => {
-    if (!selectedPatientId || !selectedDate) return;
-    setCreating(true);
+  const fetchData = async (query = "", status = "all", date?: Date) => {
+    setLoading(true);
     try {
-      const response = await api.post("/appointments/", {
-        patientId: selectedPatientId,
-        date: format(selectedDate, "yyyy-MM-dd"),
-        time: selectedTime,
-        smsReceived,
-      });
-      setAppointments((prev) => [response.data, ...prev]);
-      setDialogOpen(false);
-      setSelectedPatientId("");
-      setSelectedDate(undefined);
-      setSmsReceived(false);
+      let endpoint = "/appointments/";
+      const params = new URLSearchParams();
+      if (query) params.append("q", query);
+      if (status !== "all") params.append("status", status);
+      if (date) params.append("date", format(date, "yyyy-MM-dd"));
+
+      if (params.toString()) {
+        endpoint = `/appointments/search/?${params.toString()}`;
+      }
+
+      const apptRes = await api.get(endpoint);
+      setAppointments(
+        Array.isArray(apptRes.data)
+          ? apptRes.data
+          : (apptRes.data as any).appointments,
+      );
+    } catch (err) {
       toast({
-        title: "Appointment created",
-        description: `${response.data.patientName} on ${format(selectedDate, "PPP")}`,
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load appointments.",
       });
-    } catch (err: any) {
-      const msg =
-        err?.response?.data?.non_field_errors?.[0] ||
-        err?.response?.data?.error ||
-        "Failed to create appointment.";
-      toast({ variant: "destructive", title: "Error", description: msg });
     } finally {
-      setCreating(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData(searchQuery, statusFilter, dateFilter);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter, dateFilter]);
+
+  const handleCreateSuccess = (newAppt: Appointment) => {
+    setAppointments((prev) => [newAppt, ...prev]);
+    setDialogOpen(false);
   };
 
   // ── Mark appointment as done (showed up / late / no-show) ─────────────────
@@ -197,18 +200,32 @@ export default function Appointments() {
             </div>
 
             <div className="flex flex-col items-end gap-2">
-              {/* ML Prediction badge */}
-              <div className="flex items-center gap-1.5">
-                <Brain className="h-3.5 w-3.5 text-info" />
-                <Badge
-                  variant={
-                    appt.prediction.label === "Show" ? "default" : "destructive"
-                  }
-                  className="text-xs"
-                >
-                  {appt.prediction.label} ({appt.prediction.probability}%)
-                </Badge>
-              </div>
+              {/* ML Prediction section */}
+              {appt.prediction ? (
+                <div className="space-y-1 text-right">
+                  <div className="flex items-center justify-end gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground opacity-70">
+                    <Brain className="h-3 w-3 text-info" />
+                    Prediction: {appt.prediction.probability}%
+                  </div>
+                  <Badge
+                    variant={
+                      appt.prediction.label === "Show"
+                        ? "default"
+                        : "destructive"
+                    }
+                    className="text-[10px] py-0 h-4 px-1.5 font-semibold"
+                  >
+                    Decision: {appt.prediction.label}
+                  </Badge>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 opacity-50">
+                  <Brain className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    No prediction
+                  </span>
+                </div>
+              )}
 
               {/* Status badges */}
               {appt.status === "canceled" && (
@@ -339,111 +356,91 @@ export default function Appointments() {
             </p>
           </div>
 
-          {/* Create Appointment Dialog */}
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" /> New Appointment
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="font-display">
-                  Create Appointment
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Patient</Label>
-                  <Select
-                    value={selectedPatientId}
-                    onValueChange={setSelectedPatientId}
+          <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search patients..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[130px]">
+                  <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="canceled">Canceled</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[160px] justify-start text-left font-normal",
+                      !dateFilter && "text-muted-foreground",
+                    )}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a patient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {patients.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.fullName} ({p.id})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !selectedDate && "text-muted-foreground",
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate
-                          ? format(selectedDate, "PPP")
-                          : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) =>
-                          isBefore(date, startOfDay(new Date()))
-                        }
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Time</Label>
-                  <Select value={selectedTime} onValueChange={setSelectedTime}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={smsReceived}
-                    onCheckedChange={setSmsReceived}
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFilter ? format(dateFilter, "MMM d, yyyy") : "Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={dateFilter}
+                    onSelect={setDateFilter}
+                    className="p-3"
                   />
-                  <Label>SMS Reminder Received</Label>
-                </div>
-
-                <Button
-                  className="w-full"
-                  disabled={!selectedPatientId || !selectedDate || creating}
-                  onClick={handleCreate}
-                >
-                  {creating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Prediction…
-                    </>
-                  ) : (
-                    "Create Appointment"
+                  {dateFilter && (
+                    <div className="p-2 border-t text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDateFilter(undefined)}
+                        className="w-full text-xs"
+                      >
+                        Clear Date
+                      </Button>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+                </PopoverContent>
+              </Popover>
+
+              {/* Create Appointment Dialog */}
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />{" "}
+                    <span className="hidden sm:inline">New Appointment</span>
+                    <span className="sm:hidden">New</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="font-display">
+                      Create Appointment
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-2">
+                    <CreateAppointmentForm
+                      isAdmin={isAdmin}
+                      onSuccess={handleCreateSuccess}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
         </div>
 
         {/* Detail View Modal (read-only — prediction is immutable once saved) */}
@@ -458,44 +455,64 @@ export default function Appointments() {
             {selectedAppt && (
               <div className="space-y-6 pt-2">
                 {/* Prediction section */}
-                <div
-                  className={cn(
-                    "relative overflow-hidden rounded-xl p-6 border shadow-sm",
-                    selectedAppt.prediction.label === "Show"
-                      ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800"
-                      : "bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-800",
-                  )}
-                >
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground opacity-70">
-                        Likelihood Prediction
-                      </p>
-                      <h3
+                {selectedAppt.prediction ? (
+                  <div
+                    className={cn(
+                      "relative overflow-hidden rounded-xl p-6 border shadow-sm",
+                      selectedAppt.prediction.label === "Show"
+                        ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800"
+                        : "bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-800",
+                    )}
+                  >
+                    <div className="relative z-10 flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground opacity-70">
+                          Likelihood Prediction
+                        </p>
+                        <div className="space-y-0.5">
+                          <h3
+                            className={cn(
+                              "text-3xl font-bold tracking-tight",
+                              selectedAppt.prediction.label === "Show"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-red-600 dark:text-red-400",
+                            )}
+                          >
+                            Prediction: {selectedAppt.prediction.probability}%
+                          </h3>
+                          <p
+                            className={cn(
+                              "text-lg font-semibold opacity-90",
+                              selectedAppt.prediction.label === "Show"
+                                ? "text-emerald-500 dark:text-emerald-500"
+                                : "text-red-500 dark:text-red-500",
+                            )}
+                          >
+                            Decision: {selectedAppt.prediction.label}
+                          </p>
+                        </div>
+                      </div>
+                      <div
                         className={cn(
-                          "text-3xl font-bold tracking-tight",
+                          "rounded-full p-3",
                           selectedAppt.prediction.label === "Show"
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-red-600 dark:text-red-400",
+                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40"
+                            : "bg-red-100 text-red-600 dark:bg-red-900/40",
                         )}
                       >
-                        {selectedAppt.prediction.probability}%{" "}
-                        {selectedAppt.prediction.label}
-                      </h3>
+                        <Brain className="h-8 w-8" />
+                      </div>
                     </div>
-                    <div
-                      className={cn(
-                        "rounded-full p-3",
-                        selectedAppt.prediction.label === "Show"
-                          ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40"
-                          : "bg-red-100 text-red-600 dark:bg-red-900/40",
-                      )}
-                    >
-                      <Brain className="h-8 w-8" />
-                    </div>
+                    <Brain className="absolute -bottom-4 -right-4 h-24 w-24 text-foreground opacity-[0.03]" />
                   </div>
-                  <Brain className="absolute -bottom-4 -right-4 h-24 w-24 text-foreground opacity-[0.03]" />
-                </div>
+                ) : (
+                  <div className="rounded-xl p-6 border border-dashed text-center space-y-2">
+                    <Brain className="h-8 w-8 mx-auto text-muted-foreground opacity-50" />
+                    <p className="text-sm text-muted-foreground">
+                      Prediction data unavailable for this appointment.
+                    </p>
+                  </div>
+                )}
 
                 {/* Patient info grid */}
                 <div className="grid grid-cols-2 gap-4">

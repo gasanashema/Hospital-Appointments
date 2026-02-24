@@ -8,10 +8,13 @@ import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
 import UsersPage from "./pages/Users";
 import Predictions from "./pages/Predictions";
+import Doctors from "./pages/Doctors";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -21,11 +24,47 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/predictions" element={<Predictions />} />
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/appointments"
+            element={
+              <ProtectedRoute>
+                <Appointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/predictions"
+            element={
+              <ProtectedRoute>
+                <Predictions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors"
+            element={
+              <ProtectedRoute>
+                <Doctors />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

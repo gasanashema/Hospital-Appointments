@@ -9,7 +9,52 @@ import {
   Clock,
   TrendingUp,
   Loader2,
+  Plus,
+  UserPlus,
+  CalendarPlus,
+  UserRoundPlus,
+  PlusCircle,
+  Stethoscope,
+  CalendarIcon,
+  Search,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   BarChart,
   Bar,
@@ -26,15 +71,19 @@ import {
   Legend,
 } from "recharts";
 import { weeklyTrends } from "@/data/mockData";
-import type { Appointment } from "@/data/mockData";
+import type { Appointment, Patient, Doctor } from "@/data/mockData";
 import {
   format,
   subDays,
   isWithinInterval,
+  isBefore,
   startOfDay,
   endOfDay,
 } from "date-fns";
 import api from "@/lib/api";
+import { CreateAppointmentForm } from "@/components/CreateAppointmentForm";
+import { CreateDoctorForm } from "@/components/CreateDoctorForm";
+import { PatientSelector } from "@/components/PatientSelector";
 
 interface PredictionStats {
   total: number;
@@ -50,15 +99,33 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [predStats, setPredStats] = useState<PredictionStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user.role === "ADMIN";
+
+  // Quick Action Dialogs
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [apptDialogOpen, setApptDialogOpen] = useState(false);
+  const [predictDialogOpen, setPredictDialogOpen] = useState(false);
+  const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
+
+  // handleAddPatient state
+  const [pName, setPName] = useState("");
+  const [pAge, setPAge] = useState("");
+  const [pGender, setPGender] = useState("");
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
         const [apptRes, statsRes] = await Promise.all([
           api.get<Appointment[]>("/appointments/"),
-          api.get<PredictionStats>("/stats/predictions/"),
+          api.get<PredictionStats>("/analytics/predictions/"),
         ]);
-        setAppointments(apptRes.data);
+        setAppointments(
+          Array.isArray(apptRes.data)
+            ? apptRes.data
+            : (apptRes.data as any).appointments,
+        );
         setPredStats(statsRes.data);
       } catch (err) {
         console.error("Dashboard fetch failed:", err);
@@ -68,6 +135,24 @@ export default function Dashboard() {
     };
     fetchAll();
   }, []);
+
+  const [aDate, setADate] = useState<Date>();
+  const [aSms, setASms] = useState(false);
+  const [predicting, setPredicting] = useState(false);
+  const [onDemandRes, setOnDemandRes] = useState<any>(null);
+  const [predictPatient, setPredictPatient] = useState<Patient | null>(null);
+  const [predictDate, setPredictDate] = useState<Date>();
+
+  const handleCreateDoctorSuccess = (newDoc: Doctor) => {
+    // Optionally update local state if doctors were listed here,
+    // but Dashboard only shows a quick action.
+    setDoctorDialogOpen(false);
+  };
+
+  const handleCreateSuccess = (newAppt: Appointment) => {
+    setAppointments((prev) => [newAppt, ...prev]);
+    setApptDialogOpen(false);
+  };
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const today = format(new Date(), "yyyy-MM-dd");
@@ -161,6 +246,52 @@ export default function Dashboard() {
     },
   ];
 
+  const handleAddPatient = async () => {
+    try {
+      const res = await api.post("/patients/", {
+        id: `P-${Date.now().toString().slice(-3)}`,
+        fullName: pName,
+        age: parseInt(pAge),
+        gender: pGender,
+      });
+      setPatientDialogOpen(false);
+      setPName("");
+      setPAge("");
+      setPGender("");
+      toast({ title: "Patient added", description: res.data.fullName });
+    } catch {
+      toast({ variant: "destructive", title: "Error adding patient" });
+    }
+  };
+
+  const handlePredictOnDemand = async () => {
+    if (!predictPatient || !predictDate) {
+      toast({
+        variant: "destructive",
+        title: "Missing Info",
+        description: "Please select both a patient and a date.",
+      });
+      return;
+    }
+    setPredicting(true);
+    try {
+      const res = await api.post("/predictions/predict/", {
+        age: predictPatient.age,
+        gender: predictPatient.gender,
+        smsReceived: aSms ? 1 : 0,
+        attendanceScore: (predictPatient as any).attendanceScore || 75,
+        appointmentDate: predictDate.toISOString(),
+      });
+      setOnDemandRes(res.data);
+    } catch {
+      toast({ variant: "destructive", title: "Prediction failed" });
+    } finally {
+      setPredicting(false);
+    }
+  };
+
+  // CreateAppointmentForm handles patient/doctor search natively
+
   if (loading) {
     return (
       <Layout>
@@ -210,6 +341,216 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-4">
+          <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+            <PlusCircle className="h-5 w-5 text-primary" />
+            Quick Actions
+          </h2>
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+            {/* Add Patient */}
+            <Dialog
+              open={patientDialogOpen}
+              onOpenChange={setPatientDialogOpen}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-24 flex-col gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                >
+                  <UserPlus className="h-6 w-6 text-primary" />
+                  <span>Add Patient</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Patient</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Full Name</Label>
+                    <Input
+                      value={pName}
+                      onChange={(e) => setPName(e.target.value)}
+                      placeholder="Jane Smith"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Age</Label>
+                      <Input
+                        type="number"
+                        value={pAge}
+                        onChange={(e) => setPAge(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gender</Label>
+                      <Select value={pGender} onValueChange={setPGender}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="M">Male</SelectItem>
+                          <SelectItem value="F">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    disabled={!pName || !pAge || !pGender}
+                    onClick={handleAddPatient}
+                  >
+                    Create Patient
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Appointment */}
+            <Dialog open={apptDialogOpen} onOpenChange={setApptDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-24 flex-col gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                >
+                  <CalendarPlus className="h-6 w-6 text-primary" />
+                  <span>New Appointment</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Appointment</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <CreateAppointmentForm
+                    isAdmin={isAdmin}
+                    onSuccess={handleCreateSuccess}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Predict On-Demand */}
+            <Dialog
+              open={predictDialogOpen}
+              onOpenChange={setPredictDialogOpen}
+            >
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-24 flex-col gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all text-info hover:text-info"
+                >
+                  <Brain className="h-6 w-6" />
+                  <span>On-Demand Predict</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Quick Prediction</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Patient</Label>
+                    <PatientSelector
+                      selectedPatientId={predictPatient?.id || ""}
+                      onSelect={setPredictPatient}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Appointment Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !predictDate && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {predictDate
+                            ? format(predictDate, "PPP")
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={predictDate}
+                          onSelect={setPredictDate}
+                          disabled={(date) =>
+                            isBefore(date, startOfDay(new Date()))
+                          }
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={aSms} onCheckedChange={setASms} />
+                    <Label>SMS Reminder Sent</Label>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handlePredictOnDemand}
+                    disabled={predicting}
+                  >
+                    {predicting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Run Prediction Analysis"
+                    )}
+                  </Button>
+
+                  {onDemandRes && (
+                    <div
+                      className={cn(
+                        "p-4 rounded-lg text-center border mt-2",
+                        onDemandRes.label === "Show"
+                          ? "bg-success/10 border-success/20 text-success"
+                          : "bg-destructive/10 border-destructive/20 text-destructive",
+                      )}
+                    >
+                      <p className="text-xs uppercase font-semibold">
+                        Predicted Outcome
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {onDemandRes.probability}% {onDemandRes.label}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Doctor (Admin only) */}
+            {isAdmin && (
+              <Dialog
+                open={doctorDialogOpen}
+                onOpenChange={setDoctorDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-24 flex-col gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
+                  >
+                    <UserRoundPlus className="h-6 w-6 text-primary" />
+                    <span>Add Doctor</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Doctor</DialogTitle>
+                  </DialogHeader>
+                  <CreateDoctorForm onSuccess={handleCreateDoctorSuccess} />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
 
         {/* Charts row */}
@@ -320,15 +661,28 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <span
-                        className={
-                          a.prediction.label === "Show"
-                            ? "text-success"
-                            : "text-destructive"
-                        }
-                      >
-                        {a.prediction.label} {a.prediction.probability}%
-                      </span>
+                      {a.prediction ? (
+                        <div className="text-right">
+                          <p className="flex items-center justify-end gap-1 text-[10px] text-muted-foreground uppercase opacity-70">
+                            <Brain className="h-2.5 w-2.5 text-info" />
+                            Prediction: {a.prediction.probability}%
+                          </p>
+                          <p
+                            className={cn(
+                              "text-xs font-semibold",
+                              a.prediction.label === "Show"
+                                ? "text-success"
+                                : "text-destructive",
+                            )}
+                          >
+                            Decision: {a.prediction.label}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          No prediction
+                        </span>
+                      )}
                       <span
                         className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium ${
                           a.status === "done"
