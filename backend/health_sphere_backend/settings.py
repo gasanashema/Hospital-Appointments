@@ -24,6 +24,7 @@ ENABLE_AUTH = os.getenv("ENABLE_AUTH", "False") == "True"
 
 # ─── Installed Apps ───────────────────────────────────────────────────────────
 INSTALLED_APPS = [
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "rest_framework",
@@ -67,7 +68,12 @@ WSGI_APPLICATION = "health_sphere_backend.wsgi.application"
 # ─── Database (MongoDB via MongoEngine) ──────────────────────────────────────
 # We use MongoEngine, NOT Django ORM — so no DATABASES config needed for MongoDB.
 # The connection is established in core/apps.py on startup.
-DATABASES = {}  # Required to suppress Django's DB warnings
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
 
 # ─── MongoDB Connection ───────────────────────────────────────────────────────
 MONGO_URI = os.getenv(
@@ -117,7 +123,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://localhost:8080",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
 ]
 CORS_ALLOW_ALL_ORIGINS = ALLOW_ALL_ORIGINS  # Allow all in debug mode
 

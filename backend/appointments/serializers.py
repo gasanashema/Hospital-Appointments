@@ -1,25 +1,42 @@
 from rest_framework import serializers
 from .models import Appointment, Prediction
 from patients.models import Patient
+import datetime
 
 class PredictionSerializer(serializers.Serializer):
-    predicted_label = serializers.CharField(read_only=True)
-    predicted_probability = serializers.FloatField(read_only=True)
-    model_version = serializers.CharField(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    label = serializers.SerializerMethodField()
+    probability = serializers.SerializerMethodField()
+    modelVersion = serializers.CharField(source='model_version', read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
+
+    def get_label(self, obj):
+        return obj.predicted_label.capitalize() if obj.predicted_label else "Unknown"
+
+    def get_probability(self, obj):
+        return round(obj.predicted_probability * 100) if obj.predicted_probability is not None else 0
 
 class AppointmentSerializer(serializers.Serializer):
     id = serializers.CharField(read_only=True)
-    patient_id = serializers.CharField()
-    appointment_date = serializers.DateTimeField()
-    sms_received = serializers.BooleanField(default=False)
+    patientId = serializers.CharField(source='patient.id', required=False, read_only=True)
+    patientIdInput = serializers.CharField(write_only=True, required=True)
+    patientName = serializers.CharField(source='patient.full_name', read_only=True)
+    appointmentDate = serializers.DateTimeField(source='appointment_date')
+    date = serializers.SerializerMethodField()
+    time = serializers.SerializerMethodField()
+    smsReceived = serializers.BooleanField(source='sms_received', default=False)
     status = serializers.ChoiceField(choices=["pending", "done", "canceled"], default="pending")
-    showed_up = serializers.BooleanField(allow_null=True, required=False)
-    was_late = serializers.BooleanField(allow_null=True, required=False)
+    showedUp = serializers.BooleanField(source='showed_up', allow_null=True, required=False)
+    wasLate = serializers.BooleanField(source='was_late', allow_null=True, required=False)
     prediction = PredictionSerializer(read_only=True)
-    created_at = serializers.DateTimeField(read_only=True)
+    createdAt = serializers.DateTimeField(source='created_at', read_only=True)
 
-    def validate_patient_id(self, value):
+    def get_date(self, obj):
+        return obj.appointment_date.strftime("%Y-%m-%d")
+
+    def get_time(self, obj):
+        return obj.appointment_date.strftime("%H:%M")
+
+    def validate_patientIdInput(self, value):
         try:
             return Patient.objects.get(id=value)
         except Patient.DoesNotExist:
@@ -28,7 +45,7 @@ class AppointmentSerializer(serializers.Serializer):
     def create(self, validated_data):
         request = self.context.get('request')
         doctor = request.user
-        patient = validated_data.pop('patient_id')
+        patient = validated_data.pop('patientIdInput')
         
         appointment = Appointment(
             doctor=doctor,
@@ -40,20 +57,12 @@ class AppointmentSerializer(serializers.Serializer):
         from predictions.services.ml_service import MLService
         ml_service = MLService()
         
-        # We need to map sex: M -> 0, F -> 1
+        # Map sex: M -> 0, F -> 1
         sex_map = {'M': 0, 'F': 1}
         sex = sex_map.get(patient.gender, 0)
         
-        # Scheduling interval: appointment_date - today
-        from datetime import datetime
-        now = datetime.utcnow()
-        if appointment.appointment_date < now:
-             # Business rule: Cannot create appointment in past
-             # But let's allow it for historical data ingestion if needed, 
-             # though Phase 9 says "Cannot create appointment in past".
-             # We'll enforce validation in the view.
-             pass
-
+        # Scheduling interval
+        now = datetime.datetime.utcnow()
         scheduling_interval = (appointment.appointment_date - now).days
         if scheduling_interval < 0:
             scheduling_interval = 0
@@ -73,7 +82,6 @@ class AppointmentSerializer(serializers.Serializer):
                 model_version=version
             )
         except Exception as e:
-            # Failed prediction shouldn't block appointment creation
             print(f"Prediction failed: {e}")
             
         return appointment.save()

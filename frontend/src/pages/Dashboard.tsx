@@ -56,9 +56,13 @@ export default function Dashboard() {
       try {
         const [apptRes, statsRes] = await Promise.all([
           api.get<Appointment[]>("/appointments/"),
-          api.get<PredictionStats>("/stats/predictions/"),
+          api.get<PredictionStats>("/analytics/predictions/"),
         ]);
-        setAppointments(apptRes.data);
+        setAppointments(
+          Array.isArray(apptRes.data)
+            ? apptRes.data
+            : (apptRes.data as any).appointments,
+        );
         setPredStats(statsRes.data);
       } catch (err) {
         console.error("Dashboard fetch failed:", err);

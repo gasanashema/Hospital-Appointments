@@ -17,9 +17,16 @@ class CoreConfig(AppConfig):
 
     def ready(self):
         # ── 1. Connect to MongoDB ────────────────────────────────────────────
+        import sys
+        # Skip if running any management command (simple heuristic: first arg is manage.py and second arg is not runserver)
+        # Actually, let's just check if we have more than 1 arg and it's not runserver.
+        if len(sys.argv) > 1 and sys.argv[1] not in ['runserver', 'test']:
+            print(f"⏭️  Skipping MongoEngine/ML init for command: {sys.argv[1]}")
+            return
+
         try:
-            mongoengine.connect(host=settings.MONGO_URI)
-            print("✅ MongoEngine connected to MongoDB Atlas")
+            mongoengine.connect(host=settings.MONGO_URI, serverSelectionTimeoutMS=2000)
+            print("✅ MongoEngine connected to MongoDB")
         except Exception as e:
             print(f"❌ MongoEngine connection failed: {e}")
 

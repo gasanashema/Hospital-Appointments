@@ -6,14 +6,11 @@ from .models import Appointment
 from .serializers import AppointmentSerializer
 from core.pagination import paginate_queryset
 from users.permissions import IsAdmin, IsDoctor, RequirePasswordChange
-from datetime import datetime
 import mongoengine.queryset.visitor as Q
 
 class AppointmentListView(APIView):
     """
-    List or create appointments.
-    Enforces business rules on creation.
-    Supports pagination.
+    List all appointments for the authenticated doctor, or create a new appointment.
     """
     permission_classes = [IsAuthenticated, RequirePasswordChange]
 
@@ -22,12 +19,7 @@ class AppointmentListView(APIView):
             appointments = Appointment.objects.all()
         else:
             appointments = Appointment.objects.filter(doctor=request.user)
-        
-        # Filter by patient if requested
-        patient_id = request.query_params.get('patient_id')
-        if patient_id:
-            appointments = appointments.filter(patient=patient_id)
-
+            
         paginated_data = paginate_queryset(appointments, request)
         serializer = AppointmentSerializer(paginated_data['items'], many=True)
         
@@ -39,17 +31,6 @@ class AppointmentListView(APIView):
         })
 
     def post(self, request):
-        # Business Rule: Cannot create appointment in past
-        appointment_date_str = request.data.get('appointment_date')
-        if appointment_date_str:
-            try:
-                # Assuming ISO format from frontend
-                appointment_date = datetime.fromisoformat(appointment_date_str.replace('Z', '+00:00'))
-                if appointment_date.timestamp() < datetime.utcnow().timestamp():
-                    return Response({'error': 'Cannot create appointment in the past.'}, status=status.HTTP_400_BAD_REQUEST)
-            except ValueError:
-                pass
-
         serializer = AppointmentSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -59,42 +40,32 @@ class AppointmentListView(APIView):
 
 class AppointmentSearchView(APIView):
     """
-    Search appointments by patient, date, or status.
+    Search appointments by patient name or ID.
     """
     permission_classes = [IsAuthenticated, RequirePasswordChange]
 
     def get(self, request):
+        query = request.query_params.get('q', '')
+        if not query:
+            return Response([])
+
         if request.user.role == 'ADMIN':
             base_qs = Appointment.objects.all()
         else:
             base_qs = Appointment.objects.filter(doctor=request.user)
 
-        patient_id = request.query_params.get('patient_id')
-        date_str = request.query_params.get('date')
-        status_q = request.query_params.get('status')
-
-        if patient_id:
-            base_qs = base_qs.filter(patient=patient_id)
+        # Partial match on patient name or ID
+        search_results = base_qs.filter(
+            Q.Q(patient__full_name__icontains=query) | Q.Q(patient__id__icontains=query)
+        )
         
-        if date_str:
-            try:
-                date_val = datetime.fromisoformat(date_str)
-                # Filter by exact date or range if needed
-                base_qs = base_qs.filter(appointment_date__gte=date_val)
-            except ValueError:
-                pass
-
-        if status_q:
-            base_qs = base_qs.filter(status=status_q)
-
-        serializer = AppointmentSerializer(base_qs, many=True)
+        serializer = AppointmentSerializer(search_results, many=True)
         return Response(serializer.data)
 
 
 class AppointmentDetailView(APIView):
     """
-    Update (mark done) or Retrieve an appointment.
-    Enforces business rules on updates.
+    Retrieve or update appointment (e.g., mark as done).
     """
     permission_classes = [IsAuthenticated, RequirePasswordChange]
 
@@ -117,33 +88,22 @@ class AppointmentDetailView(APIView):
         appointment = self.get_object(appointment_id, request.user)
         if not appointment:
             return Response({'error': 'Appointment not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        showed_up = request.data.get('showed_up')
-        was_late = request.data.get('was_late', False)
-
+            
+        # Outcomes: showedUp, wasLate
+        showed_up = request.data.get('showedUp')
+        was_late = request.data.get('wasLate', False)
+        
         if showed_up is not None:
-            try:
-                appointment.mark_done(showed_up=showed_up, was_late=was_late)
-                
-                # Update patient attendance score
-                patient = appointment.patient
-                all_done_apps = Appointment.objects.filter(patient=patient, status='done')
-                shows = all_done_apps.filter(showed_up=True).count()
-                total = all_done_apps.count()
-                if total > 0:
-                    patient.attendance_score = (shows / total) * 100.0
-                    patient.save()
-
-                return Response({'message': 'Appointment marked as done.'})
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'error': 'showed_up field is required for this update.'}, status=status.HTTP_400_BAD_REQUEST)
+            appointment.mark_done(showed_up=showed_up, was_late=was_late)
+            serializer = AppointmentSerializer(appointment)
+            return Response(serializer.data)
+            
+        return Response({'error': 'showedUp field is required for outcome tracking.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AppointmentCancelView(APIView):
     """
-    Cancel an appointment.
+    Cancel a pending appointment.
     """
     permission_classes = [IsAuthenticated, RequirePasswordChange]
 
@@ -155,7 +115,7 @@ class AppointmentCancelView(APIView):
                 appointment = Appointment.objects.get(id=appointment_id, doctor=request.user)
             
             appointment.cancel()
-            return Response({'message': 'Appointment canceled successfully.'})
+            return Response({'status': 'canceled'})
         except Appointment.DoesNotExist:
             return Response({'error': 'Appointment not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
