@@ -1,7 +1,13 @@
 import { Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, CalendarCheck, TrendingUp, Shield } from "lucide-react";
+import {
+  ArrowRight,
+  Brain,
+  CalendarCheck,
+  TrendingUp,
+  Shield,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-healthcare.jpg";
 import kingFaisalLogo from "@/assets/king-faisal-logo.jpg";
@@ -59,13 +65,14 @@ const Index = () => {
               </div>
 
               <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Predict No-Shows. <span className="text-gradient">Save Time.</span>
+                Predict No-Shows.{" "}
+                <span className="text-gradient">Save Time.</span>
               </h1>
 
               <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-                Health Sphere uses machine learning to forecast patient appointment
-                no-shows, helping clinics reduce gaps, optimize schedules, and
-                improve patient care.
+                Health Sphere uses machine learning to forecast patient
+                appointment no-shows, helping clinics reduce gaps, optimize
+                schedules, and improve patient care.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -113,7 +120,74 @@ const Index = () => {
           </div>
         </div>
       </section>
+      {/* Case Study */}
+      <section className="container py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mx-auto max-w-4xl rounded-2xl border bg-card p-8 shadow-sm lg:p-12"
+        >
+          {/* Logo + Badge */}
+          <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary">
+              CASE STUDY • RWANDA
+            </div>
 
+            <img
+              src={kingFaisalLogo}
+              alt="King Faisal Hospital Rwanda Logo"
+              className="h-12 w-auto object-contain"
+            />
+          </div>
+
+          <h2 className="font-display text-3xl font-bold text-foreground">
+            King Faisal Hospital Rwanda
+          </h2>
+
+          <p className="mt-4 text-muted-foreground leading-relaxed">
+            Health Sphere was piloted to help reduce missed appointments and
+            improve scheduling efficiency at King Faisal Hospital Rwanda. By
+            applying machine learning predictions to patient appointment data,
+            the hospital team could identify high-risk no-show cases early and
+            take proactive action.
+          </p>
+
+          <div className="mt-8 grid gap-6 sm:grid-cols-3 text-center">
+            <div className="rounded-xl bg-muted/50 p-4">
+              <div className="font-display text-2xl font-bold text-primary">
+                34%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                No-show reduction
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-muted/50 p-4">
+              <div className="font-display text-2xl font-bold text-primary">
+                87%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Prediction accuracy
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-muted/50 p-4">
+              <div className="font-display text-2xl font-bold text-primary">
+                +20%
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Scheduling efficiency
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            Result: Improved patient engagement, fewer empty slots, and better
+            use of clinical resources.
+          </p>
+        </motion.div>
+      </section>
       {/* How it works */}
       <section className="container py-20">
         <motion.div
@@ -175,67 +249,15 @@ const Index = () => {
                 <div className="font-display text-4xl font-extrabold text-primary">
                   {stat.value}
                 </div>
-                <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {stat.label}
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-     {/* Case Study */}
-<section className="container py-20">
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    className="mx-auto max-w-4xl rounded-2xl border bg-card p-8 shadow-sm lg:p-12"
-  >
-    {/* Logo + Badge */}
-    <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary">
-        CASE STUDY • RWANDA
-      </div>
-
-      <img
-        src={kingFaisalLogo}
-        alt="King Faisal Hospital Rwanda Logo"
-        className="h-12 w-auto object-contain"
-      />
-    </div>
-
-    <h2 className="font-display text-3xl font-bold text-foreground">
-      King Faisal Hospital Rwanda
-    </h2>
-
-    <p className="mt-4 text-muted-foreground leading-relaxed">
-      Health Sphere was piloted to help reduce missed appointments and improve
-      scheduling efficiency at King Faisal Hospital Rwanda. By applying machine
-      learning predictions to patient appointment data, the hospital team could
-      identify high-risk no-show cases early and take proactive action.
-    </p>
-
-    <div className="mt-8 grid gap-6 sm:grid-cols-3 text-center">
-      <div className="rounded-xl bg-muted/50 p-4">
-        <div className="font-display text-2xl font-bold text-primary">34%</div>
-        <div className="text-sm text-muted-foreground">No-show reduction</div>
-      </div>
-
-      <div className="rounded-xl bg-muted/50 p-4">
-        <div className="font-display text-2xl font-bold text-primary">87%</div>
-        <div className="text-sm text-muted-foreground">Prediction accuracy</div>
-      </div>
-
-      <div className="rounded-xl bg-muted/50 p-4">
-        <div className="font-display text-2xl font-bold text-primary">+20%</div>
-        <div className="text-sm text-muted-foreground">Scheduling efficiency</div>
-      </div>
-    </div>
-
-    <p className="mt-6 text-sm text-muted-foreground">
-      Result: Improved patient engagement, fewer empty slots, and better use of clinical resources.
-    </p>
-  </motion.div>
-</section>
       {/* CTA */}
       <section className="container py-20 text-center">
         <motion.div
@@ -248,7 +270,8 @@ const Index = () => {
             Ready to Explore?
           </h2>
           <p className="text-muted-foreground">
-            Dive into the dashboard and see how ML predictions can transform appointment management.
+            Dive into the dashboard and see how ML predictions can transform
+            appointment management.
           </p>
           <Button asChild size="lg" className="gap-2">
             <Link to="/dashboard">
