@@ -1,0 +1,164 @@
+Watching for file changes with StatReloader
+Unauthorized: /api/patients/
+[24/Feb/2026 14:59:35] "HEAD /api/patients/ HTTP/1.1" 401 0
+[24/Feb/2026 15:00:51] "POST /api/patients/ HTTP/1.1" 201 164
+[24/Feb/2026 15:00:59] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:01:00] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:02:10] "GET /api/appointments/ HTTP/1.1" 200 54
+[24/Feb/2026 15:02:11] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:03:47] "GET /api/appointments/ HTTP/1.1" 200 54
+[24/Feb/2026 15:03:47] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:05:54] "GET /api/appointments/ HTTP/1.1" 200 54
+[24/Feb/2026 15:05:54] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:06:24] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:06:28] "OPTIONS /api/patients/search/?q=k HTTP/1.1" 200 0
+[24/Feb/2026 15:06:28] "GET /api/patients/search/?q=k HTTP/1.1" 200 166
+[24/Feb/2026 15:06:30] "OPTIONS /api/patients/search/?q=kagano HTTP/1.1" 200 0
+[24/Feb/2026 15:06:30] "GET /api/patients/search/?q=kagano HTTP/1.1" 200 2
+[24/Feb/2026 15:06:31] "OPTIONS /api/patients/search/?q=kagabo HTTP/1.1" 200 0
+[24/Feb/2026 15:06:32] "GET /api/patients/search/?q=kagabo HTTP/1.1" 200 166
+[24/Feb/2026 15:06:35] "OPTIONS /api/patients/search/?q=kagabo%20jean HTTP/1.1" 200 0
+[24/Feb/2026 15:06:35] "GET /api/patients/search/?q=kagabo%20jean HTTP/1.1" 200 166
+[24/Feb/2026 15:06:40] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:08:39] "GET /api/appointments/ HTTP/1.1" 200 54
+[24/Feb/2026 15:08:39] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:09:15] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:09:23] "OPTIONS /api/patients/search/?q=boss HTTP/1.1" 200 0
+[24/Feb/2026 15:09:23] "GET /api/patients/search/?q=boss HTTP/1.1" 200 2
+[24/Feb/2026 15:09:26] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:09:29] "OPTIONS /api/patients/search/?q=shema HTTP/1.1" 200 0
+[24/Feb/2026 15:09:29] "GET /api/patients/search/?q=shema HTTP/1.1" 200 131
+Internal Server Error: /api/appointments/
+Traceback (most recent call last):
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/appointments/views.py", line 37, in post
+    serializer.save()
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/serializers.py", line 208, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/appointments/serializers.py", line 66, in create
+    scheduling_interval = (appointment.appointment_date - now).days
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+TypeError: can't subtract offset-naive and offset-aware datetimes
+[24/Feb/2026 15:09:43] "POST /api/appointments/ HTTP/1.1" 500 114879
+Internal Server Error: /api/appointments/
+Traceback (most recent call last):
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/appointments/views.py", line 37, in post
+    serializer.save()
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/venv/lib/python3.11/site-packages/rest_framework/serializers.py", line 208, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/appointments/serializers.py", line 66, in create
+    scheduling_interval = (appointment.appointment_date - now).days
+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+TypeError: can't subtract offset-naive and offset-aware datetimes
+[24/Feb/2026 15:09:59] "POST /api/appointments/ HTTP/1.1" 500 114910
+/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/appointments/serializers.py changed, reloading.
+✅ MongoEngine connected to MongoDB
+✅ ML model loaded (version: logistic_v2)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 14 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): auth, contenttypes.
+Run 'python manage.py migrate' to apply them.
+February 24, 2026 - 14:59:10
+Django version 4.2.17, using settings 'health_sphere_backend.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+Watching for file changes with StatReloader
+/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/predictions/views.py changed, reloading.
+✅ MongoEngine connected to MongoDB
+✅ ML model loaded (version: logistic_v2)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 14 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): auth, contenttypes.
+Run 'python manage.py migrate' to apply them.
+February 24, 2026 - 15:10:54
+Django version 4.2.17, using settings 'health_sphere_backend.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+Watching for file changes with StatReloader
+/home/shema/New Volume data/Projects/InnovationCenter/predict/backend/auth_service/views.py changed, reloading.
+✅ MongoEngine connected to MongoDB
+✅ ML model loaded (version: logistic_v2)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 14 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): auth, contenttypes.
+Run 'python manage.py migrate' to apply them.
+February 24, 2026 - 15:11:32
+Django version 4.2.17, using settings 'health_sphere_backend.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+Watching for file changes with StatReloader
+[24/Feb/2026 15:12:38] "POST /api/appointments/ HTTP/1.1" 201 289
+[24/Feb/2026 15:12:52] "GET /api/appointments/ HTTP/1.1" 200 343
+[24/Feb/2026 15:12:53] "GET /api/patients/ HTTP/1.1" 200 1512
+[24/Feb/2026 15:13:41] "GET /api/appointments/ HTTP/1.1" 200 343
+[24/Feb/2026 15:13:41] "GET /api/patients/ HTTP/1.1" 200 1512
+✅ MongoEngine connected to MongoDB
+✅ ML model loaded (version: logistic_v2)
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 14 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): auth, contenttypes.
+Run 'python manage.py migrate' to apply them.
+February 24, 2026 - 15:12:26
+Django version 4.2.17, using settings 'health_sphere_backend.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+Prediction failed: X has 5 features, but StandardScaler is expecting 3 features as input.
+✅ MongoEngine connected to MongoDB
+✅ ML model loaded (version: logistic_v2)

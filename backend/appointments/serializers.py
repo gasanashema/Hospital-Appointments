@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Appointment, Prediction
 from patients.models import Patient
 import datetime
+from django.utils import timezone
 
 class PredictionSerializer(serializers.Serializer):
     label = serializers.SerializerMethodField()
@@ -27,6 +28,7 @@ class AppointmentSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["pending", "done", "canceled"], default="pending")
     showedUp = serializers.BooleanField(source='showed_up', allow_null=True, required=False)
     wasLate = serializers.BooleanField(source='was_late', allow_null=True, required=False)
+    doctorId = serializers.CharField(write_only=True, required=False)
     prediction = PredictionSerializer(read_only=True)
     createdAt = serializers.DateTimeField(source='created_at', read_only=True)
 
@@ -43,9 +45,20 @@ class AppointmentSerializer(serializers.Serializer):
             raise serializers.ValidationError("Patient not found.")
 
     def create(self, validated_data):
+        from users.models import User
         request = self.context.get('request')
-        doctor = request.user
         patient = validated_data.pop('patientIdInput')
+        
+        # Default doctor is the current user
+        doctor = request.user
+        
+        # If admin, allow selecting a different doctor
+        doctor_id = validated_data.pop('doctorId', None)
+        if request.user.role == 'ADMIN' and doctor_id:
+            try:
+                doctor = User.objects.get(id=doctor_id, role='DOCTOR')
+            except User.DoesNotExist:
+                raise serializers.ValidationError({"doctorId": "Doctor not found."})
         
         appointment = Appointment(
             doctor=doctor,
@@ -62,8 +75,13 @@ class AppointmentSerializer(serializers.Serializer):
         sex = sex_map.get(patient.gender, 0)
         
         # Scheduling interval
-        now = datetime.datetime.utcnow()
-        scheduling_interval = (appointment.appointment_date - now).days
+        from django.utils import timezone
+        now = timezone.now()
+        appt_date = appointment.appointment_date
+        if timezone.is_naive(appt_date):
+            appt_date = timezone.make_aware(appt_date)
+        
+        scheduling_interval = (appt_date - now).days
         if scheduling_interval < 0:
             scheduling_interval = 0
 

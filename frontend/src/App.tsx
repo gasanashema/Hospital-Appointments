@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
 import UsersPage from "./pages/Users";
 import Predictions from "./pages/Predictions";
+import Doctors from "./pages/Doctors";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +54,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Predictions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors"
+            element={
+              <ProtectedRoute>
+                <Doctors />
               </ProtectedRoute>
             }
           />

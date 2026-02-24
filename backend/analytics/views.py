@@ -1,14 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from users.permissions import RequirePasswordChange
+
 from appointments.models import Appointment
 
 class PredictionAnalyticsView(APIView):
     """
     Calculate accuracy stats based on actual outcomes.
     """
-    permission_classes = [IsAuthenticated, RequirePasswordChange]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         # Get all appointments with an outcome

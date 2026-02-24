@@ -42,7 +42,7 @@ import { Patient } from "@/data/mockData";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
-import { Loader2, Plus, Trash2, Users, Pencil } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, Pencil, Search } from "lucide-react";
 
 export default function UsersPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -56,15 +56,19 @@ export default function UsersPage() {
   const [editName, setEditName] = useState("");
   const [editAge, setEditAge] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchPatients();
   }, []);
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (query = "") => {
+    setLoading(true);
     try {
-      const response = await api.get("/patients/");
+      const endpoint = query ? `/patients/search/?q=${query}` : "/patients/";
+      const response = await api.get(endpoint);
       setPatients(
         Array.isArray(response.data) ? response.data : response.data.patients,
       );
@@ -76,8 +80,21 @@ export default function UsersPage() {
       });
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery) {
+        setIsSearching(true);
+        fetchPatients(searchQuery);
+      } else {
+        fetchPatients();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleAdd = async () => {
     if (!name || !age || !gender) return;
@@ -168,10 +185,22 @@ export default function UsersPage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or ID..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-muted-foreground" />
+              )}
+            </div>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 shrink-0">
                   <Plus className="h-4 w-4" /> Add Patient
                 </Button>
               </DialogTrigger>
