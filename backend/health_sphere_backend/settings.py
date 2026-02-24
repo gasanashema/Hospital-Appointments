@@ -24,11 +24,19 @@ ENABLE_AUTH = os.getenv("ENABLE_AUTH", "False") == "True"
 
 # ─── Installed Apps ───────────────────────────────────────────────────────────
 INSTALLED_APPS = [
+    "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
     "corsheaders",
     "core",
+    "auth_service",
+    "users",
+    "patients",
+    "appointments",
+    "predictions",
+    "analytics",
 ]
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
@@ -59,7 +67,12 @@ WSGI_APPLICATION = "health_sphere_backend.wsgi.application"
 # ─── Database (MongoDB via MongoEngine) ──────────────────────────────────────
 # We use MongoEngine, NOT Django ORM — so no DATABASES config needed for MongoDB.
 # The connection is established in core/apps.py on startup.
-DATABASES = {}  # Required to suppress Django's DB warnings
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
 
 # ─── MongoDB Connection ───────────────────────────────────────────────────────
 MONGO_URI = os.getenv(
@@ -77,7 +90,7 @@ REST_FRAMEWORK = {
     ],
     # Auth is optionally enabled via ENABLE_AUTH setting
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "users.authentication.MongoJWTAuthentication",
     ] if ENABLE_AUTH else [],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -89,12 +102,29 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
 }
 
+# ─── Simple JWT ───────────────────────────────────────────────────────────────
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 # Allow the React frontend (Vite default port 5173) to call this backend
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
+    "http://localhost:8080",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
 ]
 CORS_ALLOW_ALL_ORIGINS = ALLOW_ALL_ORIGINS  # Allow all in debug mode
 
@@ -109,3 +139,20 @@ STATIC_URL = "static/"
 
 # ─── ML Model Path ────────────────────────────────────────────────────────────
 MODEL_PATH = BASE_DIR / "model.pkl"
+
+# ─── Celery & Redis ───────────────────────────────────────────────────────────
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# ─── Email Setup (SMTP) ───────────────────────────────────────────────────────
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend" if not DEBUG else "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Health Sphere <noreply@healthsphere.com>")
