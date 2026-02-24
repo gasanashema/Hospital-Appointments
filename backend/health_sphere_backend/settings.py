@@ -27,8 +27,16 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "core",
+    "auth_service",
+    "users",
+    "patients",
+    "appointments",
+    "predictions",
+    "analytics",
 ]
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
@@ -77,7 +85,7 @@ REST_FRAMEWORK = {
     ],
     # Auth is optionally enabled via ENABLE_AUTH setting
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "users.authentication.MongoJWTAuthentication",
     ] if ENABLE_AUTH else [],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -87,6 +95,21 @@ REST_FRAMEWORK = {
     # We don't use Django's auth system (using MongoEngine only), so disable
     # DRF's AnonymousUser which depends on django.contrib.auth
     "UNAUTHENTICATED_USER": None,
+}
+
+# ─── Simple JWT ───────────────────────────────────────────────────────────────
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -109,3 +132,20 @@ STATIC_URL = "static/"
 
 # ─── ML Model Path ────────────────────────────────────────────────────────────
 MODEL_PATH = BASE_DIR / "model.pkl"
+
+# ─── Celery & Redis ───────────────────────────────────────────────────────────
+CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# ─── Email Setup (SMTP) ───────────────────────────────────────────────────────
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend" if not DEBUG else "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Health Sphere <noreply@healthsphere.com>")

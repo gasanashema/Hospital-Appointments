@@ -23,10 +23,14 @@ class CoreConfig(AppConfig):
         except Exception as e:
             print(f"❌ MongoEngine connection failed: {e}")
 
-        # ── 2. Load or train ML model ────────────────────────────────────────
+        # ── 2. Load ML model ────────────────────────────────────────────────
         # Import here to avoid circular imports and ensure Django is fully loaded
         try:
-            from core.services.ml_service import load_or_train_model
-            load_or_train_model()
+            from predictions.services.ml_service import MLService
+            ml_service = MLService()
+            if not ml_service.load_model():
+                print("⚠️  ML model not found. Initial training required via Admin API.")
+            else:
+                print(f"✅ ML model loaded (version: {ml_service.get_current_version()})")
         except Exception as e:
             print(f"⚠️  ML model initialization skipped: {e}")
