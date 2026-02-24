@@ -20,8 +20,8 @@ export function Navbar() {
     { label: "Dashboard", path: "/dashboard" },
     { label: "Appointments", path: "/appointments" },
     { label: "Patients", path: "/users" },
-    { label: "Predictions", path: "/predictions" },
     ...(isAdmin ? [{ label: "Doctors", path: "/doctors" }] : []),
+    { label: "Predictions", path: "/predictions" },
   ];
 
   const handleLogout = async () => {

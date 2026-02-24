@@ -17,6 +17,8 @@ import {
   Stethoscope,
   CalendarIcon,
   Search,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +29,11 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,10 +44,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -61,15 +71,19 @@ import {
   Legend,
 } from "recharts";
 import { weeklyTrends } from "@/data/mockData";
-import type { Appointment } from "@/data/mockData";
+import type { Appointment, Patient, Doctor } from "@/data/mockData";
 import {
   format,
   subDays,
   isWithinInterval,
+  isBefore,
   startOfDay,
   endOfDay,
 } from "date-fns";
 import api from "@/lib/api";
+import { CreateAppointmentForm } from "@/components/CreateAppointmentForm";
+import { CreateDoctorForm } from "@/components/CreateDoctorForm";
+import { PatientSelector } from "@/components/PatientSelector";
 
 interface PredictionStats {
   total: number;
@@ -95,25 +109,10 @@ export default function Dashboard() {
   const [predictDialogOpen, setPredictDialogOpen] = useState(false);
   const [doctorDialogOpen, setDoctorDialogOpen] = useState(false);
 
-  // Form States (Simplified for Quick Actions)
+  // handleAddPatient state
   const [pName, setPName] = useState("");
   const [pAge, setPAge] = useState("");
   const [pGender, setPGender] = useState("");
-
-  const [aPatientId, setAPatientId] = useState("");
-  const [aDate, setADate] = useState<Date>();
-  const [aTime, setATime] = useState("09:00");
-  const [aSms, setASms] = useState(false);
-
-  const [dName, setDName] = useState("");
-  const [dEmail, setDEmail] = useState("");
-  const [dPass, setDPass] = useState("");
-
-  const [onDemandRes, setOnDemandRes] = useState<any>(null);
-  const [predicting, setPredicting] = useState(false);
-
-  const [patientSearch, setPatientSearch] = useState("");
-  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -136,6 +135,24 @@ export default function Dashboard() {
     };
     fetchAll();
   }, []);
+
+  const [aDate, setADate] = useState<Date>();
+  const [aSms, setASms] = useState(false);
+  const [predicting, setPredicting] = useState(false);
+  const [onDemandRes, setOnDemandRes] = useState<any>(null);
+  const [predictPatient, setPredictPatient] = useState<Patient | null>(null);
+  const [predictDate, setPredictDate] = useState<Date>();
+
+  const handleCreateDoctorSuccess = (newDoc: Doctor) => {
+    // Optionally update local state if doctors were listed here,
+    // but Dashboard only shows a quick action.
+    setDoctorDialogOpen(false);
+  };
+
+  const handleCreateSuccess = (newAppt: Appointment) => {
+    setAppointments((prev) => [newAppt, ...prev]);
+    setApptDialogOpen(false);
+  };
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const today = format(new Date(), "yyyy-MM-dd");
@@ -247,50 +264,23 @@ export default function Dashboard() {
     }
   };
 
-  const handleAddAppt = async () => {
-    if (!aPatientId || !aDate) return;
-    try {
-      const res = await api.post("/appointments/", {
-        patientIdInput: aPatientId,
-        appointmentDate: format(aDate, "yyyy-MM-dd") + "T" + aTime + ":00",
-        smsReceived: aSms,
-      });
-      setAppointments((prev) => [res.data, ...prev]);
-      setApptDialogOpen(false);
-      setADate(undefined);
-      setAPatientId("");
-      toast({ title: "Appointment created" });
-    } catch {
-      toast({ variant: "destructive", title: "Error creating appointment" });
-    }
-  };
-
-  const handleAddDoctor = async () => {
-    try {
-      await api.post("/admin/doctors/", {
-        full_name: dName,
-        email: dEmail,
-        password: dPass,
-      });
-      setDoctorDialogOpen(false);
-      setDName("");
-      setDEmail("");
-      setDPass("");
-      toast({ title: "Doctor created" });
-    } catch {
-      toast({ variant: "destructive", title: "Error creating doctor" });
-    }
-  };
-
   const handlePredictOnDemand = async () => {
+    if (!predictPatient || !predictDate) {
+      toast({
+        variant: "destructive",
+        title: "Missing Info",
+        description: "Please select both a patient and a date.",
+      });
+      return;
+    }
     setPredicting(true);
     try {
       const res = await api.post("/predictions/predict/", {
-        age: parseInt(pAge) || 30,
-        gender: pGender || "M",
+        age: predictPatient.age,
+        gender: predictPatient.gender,
         smsReceived: aSms ? 1 : 0,
-        attendanceScore: 75,
-        appointmentDate: aDate ? aDate.toISOString() : new Date().toISOString(),
+        attendanceScore: (predictPatient as any).attendanceScore || 75,
+        appointmentDate: predictDate.toISOString(),
       });
       setOnDemandRes(res.data);
     } catch {
@@ -300,22 +290,7 @@ export default function Dashboard() {
     }
   };
 
-  const [patients, setPatients] = useState<any[]>([]);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (apptDialogOpen) {
-        setIsSearchingPatients(true);
-        const endpoint = patientSearch
-          ? `/patients/search/?q=${patientSearch}`
-          : "/patients/";
-        api.get(endpoint).then((res) => {
-          setPatients(Array.isArray(res.data) ? res.data : res.data.patients);
-          setIsSearchingPatients(false);
-        });
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [apptDialogOpen, patientSearch]);
+  // CreateAppointmentForm handles patient/doctor search natively
 
   if (loading) {
     return (
@@ -451,74 +426,10 @@ export default function Dashboard() {
                   <DialogTitle>Create Appointment</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Find Patient</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by name or ID..."
-                        className="pl-9 h-9 text-xs"
-                        value={patientSearch}
-                        onChange={(e) => setPatientSearch(e.target.value)}
-                      />
-                      {isSearchingPatients && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Select Patient</Label>
-                    <Select value={aPatientId} onValueChange={setAPatientId}>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            patients.length > 0
-                              ? "Select Patient"
-                              : "No patients found"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {patients.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.fullName} ({p.id})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !aDate && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {aDate ? format(aDate, "PPP") : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={aDate}
-                          onSelect={setADate}
-                          disabled={(d) => d < startOfDay(new Date())}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <Button
-                    className="w-full"
-                    disabled={!aPatientId || !aDate}
-                    onClick={handleAddAppt}
-                  >
-                    Create Appointment
-                  </Button>
+                  <CreateAppointmentForm
+                    isAdmin={isAdmin}
+                    onSuccess={handleCreateSuccess}
+                  />
                 </div>
               </DialogContent>
             </Dialog>
@@ -542,27 +453,42 @@ export default function Dashboard() {
                   <DialogTitle>Quick Prediction</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Age</Label>
-                      <Input
-                        type="number"
-                        value={pAge}
-                        onChange={(e) => setPAge(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Gender</Label>
-                      <Select value={pGender} onValueChange={setPGender}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="M">Male</SelectItem>
-                          <SelectItem value="F">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Patient</Label>
+                    <PatientSelector
+                      selectedPatientId={predictPatient?.id || ""}
+                      onSelect={setPredictPatient}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Appointment Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !predictDate && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {predictDate
+                            ? format(predictDate, "PPP")
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={predictDate}
+                          onSelect={setPredictDate}
+                          disabled={(date) =>
+                            isBefore(date, startOfDay(new Date()))
+                          }
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch checked={aSms} onCheckedChange={setASms} />
@@ -613,45 +539,14 @@ export default function Dashboard() {
                     className="h-24 flex-col gap-2 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
                   >
                     <UserRoundPlus className="h-6 w-6 text-primary" />
-                    <span>Add Provider</span>
+                    <span>Add Doctor</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Add Healthcare Provider</DialogTitle>
+                    <DialogTitle>Add New Doctor</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Full Name</Label>
-                      <Input
-                        value={dName}
-                        onChange={(e) => setDName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={dEmail}
-                        onChange={(e) => setDEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Password</Label>
-                      <Input
-                        type="password"
-                        value={dPass}
-                        onChange={(e) => setDPass(e.target.value)}
-                      />
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={handleAddDoctor}
-                      disabled={!dName || !dEmail || !dPass}
-                    >
-                      Create Provider
-                    </Button>
-                  </div>
+                  <CreateDoctorForm onSuccess={handleCreateDoctorSuccess} />
                 </DialogContent>
               </Dialog>
             )}
