@@ -4,27 +4,31 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Brain, CalendarCheck, TrendingUp, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-healthcare.jpg";
-
+import kingFaisalLogo from "@/assets/king-faisal-logo.jpg";
 const features = [
   {
     icon: Brain,
     title: "ML-Powered Predictions",
-    description: "Our model analyzes patient history, demographics, and engagement to predict no-shows before they happen.",
+    description:
+      "Our model analyzes patient history, demographics, and engagement to predict no-shows before they happen.",
   },
   {
     icon: CalendarCheck,
     title: "Smart Scheduling",
-    description: "Optimize your appointment slots by identifying high-risk patients and sending targeted reminders.",
+    description:
+      "Optimize your appointment slots by identifying high-risk patients and sending targeted reminders.",
   },
   {
     icon: TrendingUp,
     title: "Real-Time Analytics",
-    description: "Track show rates, prediction accuracy, and trends with interactive dashboards updated in real time.",
+    description:
+      "Track show rates, prediction accuracy, and trends with interactive dashboards updated in real time.",
   },
   {
     icon: Shield,
     title: "Actionable Insights",
-    description: "Move from reactive to proactive care management with data-driven decisions.",
+    description:
+      "Move from reactive to proactive care management with data-driven decisions.",
   },
 ];
 
@@ -50,24 +54,27 @@ const Index = () => {
               transition={{ duration: 0.6 }}
               className="space-y-6"
             >
-              <div className="inline-flex items-center gap-2  bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground">
+              <div className="inline-flex items-center gap-2 bg-accent px-4 py-1.5 text-xs font-semibold text-accent-foreground">
                 AUCA INNOVATION CENTER
               </div>
+
               <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-                Predict No-Shows.{" "}
-                <span className="text-gradient">Save Time.</span>
+                Predict No-Shows. <span className="text-gradient">Save Time.</span>
               </h1>
+
               <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
                 Health Sphere uses machine learning to forecast patient appointment
                 no-shows, helping clinics reduce gaps, optimize schedules, and
                 improve patient care.
               </p>
+
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="gap-2">
                   <Link to="/dashboard">
                     Open Dashboard <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
+
                 <Button asChild variant="outline" size="lg">
                   <Link to="/appointments">View Appointments</Link>
                 </Button>
@@ -87,15 +94,19 @@ const Index = () => {
                   className="h-full w-full object-cover"
                 />
               </div>
-              {/* Floating stat card */}
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.4 }}
                 className="absolute -bottom-4 -left-4 rounded-xl border bg-card p-4 shadow-lg lg:-bottom-6 lg:-left-6"
               >
-                <div className="text-xs font-medium text-muted-foreground">Prediction Accuracy</div>
-                <div className="font-display text-2xl font-bold text-primary">87.3%</div>
+                <div className="text-xs font-medium text-muted-foreground">
+                  Prediction Accuracy
+                </div>
+                <div className="font-display text-2xl font-bold text-primary">
+                  87.3%
+                </div>
                 <div className="text-xs text-success">↑ 4.2% this month</div>
               </motion.div>
             </motion.div>
@@ -171,6 +182,60 @@ const Index = () => {
         </div>
       </section>
 
+     {/* Case Study */}
+<section className="container py-20">
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    className="mx-auto max-w-4xl rounded-2xl border bg-card p-8 shadow-sm lg:p-12"
+  >
+    {/* Logo + Badge */}
+    <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary">
+        CASE STUDY • RWANDA
+      </div>
+
+      <img
+        src={kingFaisalLogo}
+        alt="King Faisal Hospital Rwanda Logo"
+        className="h-12 w-auto object-contain"
+      />
+    </div>
+
+    <h2 className="font-display text-3xl font-bold text-foreground">
+      King Faisal Hospital Rwanda
+    </h2>
+
+    <p className="mt-4 text-muted-foreground leading-relaxed">
+      Health Sphere was piloted to help reduce missed appointments and improve
+      scheduling efficiency at King Faisal Hospital Rwanda. By applying machine
+      learning predictions to patient appointment data, the hospital team could
+      identify high-risk no-show cases early and take proactive action.
+    </p>
+
+    <div className="mt-8 grid gap-6 sm:grid-cols-3 text-center">
+      <div className="rounded-xl bg-muted/50 p-4">
+        <div className="font-display text-2xl font-bold text-primary">34%</div>
+        <div className="text-sm text-muted-foreground">No-show reduction</div>
+      </div>
+
+      <div className="rounded-xl bg-muted/50 p-4">
+        <div className="font-display text-2xl font-bold text-primary">87%</div>
+        <div className="text-sm text-muted-foreground">Prediction accuracy</div>
+      </div>
+
+      <div className="rounded-xl bg-muted/50 p-4">
+        <div className="font-display text-2xl font-bold text-primary">+20%</div>
+        <div className="text-sm text-muted-foreground">Scheduling efficiency</div>
+      </div>
+    </div>
+
+    <p className="mt-6 text-sm text-muted-foreground">
+      Result: Improved patient engagement, fewer empty slots, and better use of clinical resources.
+    </p>
+  </motion.div>
+</section>
       {/* CTA */}
       <section className="container py-20 text-center">
         <motion.div
