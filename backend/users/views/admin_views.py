@@ -50,13 +50,23 @@ class ListDoctorsView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        doctors = User.objects.filter(role='DOCTOR')
+        query = request.GET.get('q', '')
+        
+        # Only show active doctors
+        doctors = User.objects.filter(role='DOCTOR', is_active=True)
+        
+        if query:
+            from mongoengine.queryset.visitor import Q
+            doctors = doctors.filter(
+                Q(full_name__icontains=query) | Q(email__icontains=query)
+            )
+            
         data = [{
             'id': str(d.id),
             'email': d.email,
-            'full_name': d.full_name,
-            'is_active': d.is_active,
-            'created_at': d.created_at
+            'fullName': d.full_name,
+            'isActive': d.is_active,
+            'createdAt': d.created_at
         } for d in doctors]
         return Response(data, status=status.HTTP_200_OK)
 class DoctorDetailView(APIView):
